@@ -3,122 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            color: var(--tg-theme-text-color);
-            background: var(--tg-theme-bg-color);
-        }
-
-        .Main {
-            width: 100%;
-            padding: 25px;
-            text-align: center;
-
-        }
-
-        h1 {
-            margin-top: 40px;
-            margin-bottom: 10px;
-        }
-
-        img {
-            width: 70px;
-            margin: 30px auto;
-        }
-
-        .btn {
-            border: 0;
-            border-radius: 5px;
-            margin-top: 50px;
-            height: 60px;
-            width: 200px;
-            font-style: 20px;
-            font-weight: 500;
-            cursor: pointer;
-            color: var(--tg-theme-button-text-color);
-            background: var(--tg-theme-button-color);
-        }
-
-        form {
-            display: none;
-            text-align: center;
-        }
-        
-        input {
-            outline: none;
-            border-radius: 5px;
-            border: 2px solid #535353;
-            padding: 15px 10px;
-            margin: 10px 0 0;
-            background: var(--tg-theme-section-separator-color);
-            color: var(--tg-theme-text-color);
-            transition: all .2s;
-        }
-        
-        input:focus {
-            border-color: var(--tg-theme-secondary-bg-color)
-        }
-        
-    </style>
-</head>
-<body>
-    <div class="Main">
-        <h1>Тестовое приложение</h1>
-        <img src="{{ url_for('static', filename='bot.png') }}" alt="">
-        <p></p>
-        <button class="btn f-btn">Тест отправки данных</button>
-    </div>
-    <form class="test-form">    
-        <input type="text" placeholder="Введите заголовок" class="title-inp">
-        <input type="text" placeholder="Введите описание" class="desc-inp">
-        <input type="text" placeholder="Введите текст" class="text-inp">
-        <button class="btn s-btn">Отправить</button>
-    </form>
-
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-    <script>
-        let tg = window.Telegram.WebApp;
-
-        let fBtn = document.getElementsByClassName("f-btn")[0]
-        let sBtn = document.getElementsByClassName("s-btn")[0]
-
-        fBtn.addEventListener("click", () => {
-            document.getElementsByClassName("Main")[0].style.display = "none";
-            document.getElementsByClassName("test-form")[0].style.display = "block";
-        });
-
-        sBtn.addEventListener("click", () => {
-            let title = document.getElementsByClassName("title-inp")[0];
-            let description = document.getElementsByClassName("desc-inp")[0];
-            let text = document.getElementsByClassName("text-inp")[0];
-
-            
-            let data = {
-                title: title.value,
-                desc: description.value,    
-                text: text.value
-            }
-
-            tg.sendData(JSON.stringify(data));
-        });
-    </script>
-</body>
-</html> -->
-
-
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mini App</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -128,27 +12,29 @@
             font-family: Arial, sans-serif;
         }
         .Main { width: 100%; padding: 25px; text-align: center; }
-        h1 { margin-top: 40px; margin-bottom: 10px; }
-        img { width: 70px; margin: 30px auto; }
+        h1 { margin-top: 24px; margin-bottom: 8px; }
+        img { width: 70px; margin: 24px auto; }
         .btn {
-            border: 0; border-radius: 5px; margin-top: 20px;
+            border: 0; border-radius: 6px; margin-top: 16px;
             height: 48px; width: 220px; font-size: 16px; font-weight: 600;
             cursor: pointer; color: var(--tg-theme-button-text-color);
             background: var(--tg-theme-button-color);
         }
         form { text-align: center; }
-        input {
-            outline: none; border-radius: 5px; border: 2px solid #535353;
+        input, select {
+            outline: none; border-radius: 6px; border: 2px solid #535353;
             padding: 12px 10px; margin: 10px 0 0; width: 100%;
             background: var(--tg-theme-section-separator-color);
             color: var(--tg-theme-text-color); transition: all .2s;
         }
-        input:focus { border-color: var(--tg-theme-secondary-bg-color) }
-        .card { max-width: 360px; margin: 0 auto; padding: 24px; }
+        input:focus, select:focus { border-color: var(--tg-theme-secondary-bg-color) }
+        .card { max-width: 380px; margin: 0 auto; padding: 20px; }
         .alert { margin: 12px auto; max-width: 360px; padding: 10px 14px; border-radius: 6px; }
         .alert.success { background: #d1fae5; color: #065f46; }
         .alert.error { background: #fee2e2; color: #991b1b; }
         .alert.info { background: #e0f2fe; color: #075985; }
+        .choice-buttons { display: grid; gap: 12px; margin-top: 18px; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
@@ -173,16 +59,32 @@
       </div>
     {% else %}
       <div class="Main">
-        <h1>Тестовое приложение</h1>
+        <h1>Выбор приложения</h1>
         <img src="{{ url_for('static', filename='bot.png') }}" alt="">
-        <p></p>
-        <button class="btn f-btn" type="button">Тест отправки данных</button>
+        <div class="choice-buttons">
+          <button class="btn choice-btn" data-choice="Pangolin" type="button">Pangolin</button>
+          <button class="btn choice-btn" data-choice="Corax" type="button">Corax</button>
+        </div>
         <form action="/logout" method="POST" style="margin-top:20px;">
           <button class="btn" type="submit" style="background:#444;">Выйти</button>
         </form>
       </div>
 
-      <form class="test-form" style="display:none; padding: 0 25px;">
+      <form class="test-form hidden" style="padding: 0 25px;">
+        <h1 style="text-align:center;">Отправка данных</h1>
+        <input type="hidden" class="choice-hidden" value="">
+        <select class="subnet-select" required>
+          <option value="" disabled selected>Выберите подсеть</option>
+          <option value="10.10.10.0/24">10.10.10.0/24</option>
+          <option value="172.0.0.0/24">172.0.0.0/24</option>
+          <option value="192.0.0.0/24">192.0.0.0/24</option>
+        </select>
+        <select class="flavor-select" required>
+          <option value="" disabled selected>Выберите флейвор ВМ</option>
+          <option value="2/4 30%">2/4 30%</option>
+          <option value="4/8 30%">4/8 30%</option>
+          <option value="8/16 30%">8/16 30%</option>
+        </select>
         <input type="text" placeholder="Введите заголовок" class="title-inp">
         <input type="text" placeholder="Введите описание" class="desc-inp">
         <input type="text" placeholder="Введите текст" class="text-inp">
@@ -192,25 +94,581 @@
       <script src="https://telegram.org/js/telegram-web-app.js"></script>
       <script>
         const tg = window.Telegram.WebApp;
+        tg.expand(); // better viewport for mini app
+
         const mainBlock = document.getElementsByClassName("Main")[0];
         const formBlock = document.getElementsByClassName("test-form")[0];
-        const fBtn = document.getElementsByClassName("f-btn")[0];
-        const sBtn = document.getElementsByClassName("s-btn")[0];
+        const choiceButtons = document.querySelectorAll(".choice-btn");
+        const choiceHidden = document.querySelector(".choice-hidden");
+        const sendBtn = document.querySelector(".s-btn");
 
-        fBtn.addEventListener("click", () => {
-            mainBlock.style.display = "none";
-            formBlock.style.display = "block";
+        choiceButtons.forEach(btn => {
+          btn.addEventListener("click", () => {
+            const val = btn.dataset.choice;
+            choiceHidden.value = val;
+            mainBlock.classList.add("hidden");
+            formBlock.classList.remove("hidden");
+          });
         });
 
-        sBtn.addEventListener("click", () => {
-            const title = document.getElementsByClassName("title-inp")[0].value.trim();
-            const description = document.getElementsByClassName("desc-inp")[0].value.trim();
-            const text = document.getElementsByClassName("text-inp")[0].value.trim();
+        sendBtn.addEventListener("click", () => {
+          const title = document.querySelector(".title-inp").value.trim();
+          const description = document.querySelector(".desc-inp").value.trim();
+          const text = document.querySelector(".text-inp").value.trim();
+          const subnet = document.querySelector(".subnet-select").value;
+          const flavor = document.querySelector(".flavor-select").value;
+          const choice = choiceHidden.value || "Не выбрано";
 
-            const data = { title, desc: description, text };
-            tg.sendData(JSON.stringify(data));
+          if (!subnet || !flavor) {
+            tg.showAlert("Выберите подсеть и флейвор ВМ");
+            return;
+          }
+
+          const data = { choice, title, desc: description, text, subnet, flavor };
+          tg.sendData(JSON.stringify(data));
         });
       </script>
     {% endif %}
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cloud Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+            --border-radius-sm: 12px;
+            --border-radius-lg: 18px;
+            --spacing-sm: 12px;
+            --spacing-md: 24px;
+            --spacing-lg: 32px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            color: var(--tg-theme-text-color);
+            background: var(--tg-theme-bg-color);
+            line-height: 1.5;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+        }
+
+        .app-header {
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+            padding-top: 10px;
+        }
+
+        .app-logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 24px;
+            background: linear-gradient(135deg, var(--tg-theme-button-color), #4a6cf7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto var(--spacing-sm);
+            box-shadow: var(--shadow-md);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .app-logo img {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(to right, var(--tg-theme-text-color), var(--tg-theme-link-color, #4a6cf7));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .app-subtitle {
+            color: var(--tg-theme-hint-color);
+            font-size: 16px;
+            margin-top: 4px;
+        }
+
+        .card {
+            background: var(--tg-theme-secondary-bg-color);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            box-shadow: var(--shadow-sm);
+            backdrop-filter: blur(12px);
+            transition: var(--transition);
+        }
+
+        .card:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: var(--spacing-sm);
+            text-align: left;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: var(--tg-theme-text-color);
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 14px var(--spacing-sm);
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: var(--border-radius-sm);
+            color: var(--tg-theme-text-color);
+            font-family: inherit;
+            font-size: 16px;
+            transition: var(--transition);
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--tg-theme-link-color, #4a6cf7);
+            box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.2);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .select-field {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23aaa' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: var(--border-radius-sm);
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.7s;
+        }
+
+        .btn:active::after {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-primary:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--tg-theme-text-color);
+        }
+
+        .btn-secondary:active {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-icon {
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+        }
+
+        .choice-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--spacing-sm);
+            margin: var(--spacing-lg) 0;
+        }
+
+        .choice-card {
+            background: linear-gradient(135deg, var(--tg-theme-secondary-bg-color), rgba(255, 255, 255, 0.05));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-md);
+            text-align: left;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .choice-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--tg-theme-link-color, rgba(74, 108, 247, 0.4));
+        }
+
+        .choice-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--tg-theme-link-color, #4a6cf7);
+            transform: scaleY(0);
+            transform-origin: bottom;
+            transition: transform 0.4s ease;
+        }
+
+        .choice-card:hover::before {
+            transform: scaleY(1);
+        }
+
+        .choice-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .choice-desc {
+            color: var(--tg-theme-hint-color);
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .alert {
+            border-radius: var(--border-radius-sm);
+            padding: 14px var(--spacing-sm);
+            margin: var(--spacing-sm) 0;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.4s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .alert.success {
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #16a34a;
+        }
+
+        .alert.error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #dc2626;
+        }
+
+        .alert.info {
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #2563eb;
+        }
+
+        .alert-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .form-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .page-transition {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: var(--transition);
+        }
+
+        .page-transition.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .logout-container {
+            margin-top: var(--spacing-md);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        @media (prefers-reduced-motion: no-preference) {
+            .btn, .choice-card, .input-field {
+                transition: var(--transition);
+            }
+        }
+
+        @supports (backdrop-filter: blur(12px)) {
+            .card {
+                backdrop-filter: blur(12px);
+                background: rgba(30, 30, 30, 0.6);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, msg in messages %}
+              <div class="alert {{ category }}">
+                <span class="alert-icon">
+                  {% if category == 'success' %}✓
+                  {% elif category == 'error' %}!
+                  {% else %}ℹ{% endif %}
+                </span>
+                {{ msg }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        {% if not is_authed %}
+        <div class="app-header">
+            <div class="app-logo">
+                <img src="{{ url_for('static', filename='bot.png') }}" alt="App Logo">
+            </div>
+            <h1>Cloud Manager</h1>
+            <div class="app-subtitle">Управление облачной инфраструктурой</div>
+        </div>
+
+        <div class="card page-transition active">
+            <form action="/login" method="POST">
+                <div class="form-group">
+                    <label class="form-label" for="login">Логин</label>
+                    <input id="login" name="login" type="text" class="input-field" placeholder="Ваш логин" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="password">Пароль</label>
+                    <input id="password" name="password" type="password" class="input-field" placeholder="Пароль" required autocomplete="current-password">
+                </div>
+                <button class="btn btn-primary" type="submit">
+                    <span class="btn-icon">→</span> Продолжить
+                </button>
+            </form>
+        </div>
+        {% else %}
+        <div class="app-header">
+            <div class="app-logo">
+                <img src="{{ url_for('static', filename='bot.png') }}" alt="App Logo">
+            </div>
+            <h1>Выберите сервис</h1>
+            <div class="app-subtitle">Управление облачной инфраструктурой</div>
+        </div>
+
+        <div class="page-transition active" id="mainSection">
+            <div class="choice-grid">
+                <div class="choice-card" data-choice="Pangolin">
+                    <div class="choice-title">Pangolin</div>
+                    <div class="choice-desc">Кластер</div>
+                </div>
+                <div class="choice-card" data-choice="Corax">
+                    <div class="choice-title">Corax</div>
+                    <div class="choice-desc">Кластер</div>
+                </div>
+            </div>
+
+            <div class="logout-container">
+                <form action="/logout" method="POST">
+                    <button class="btn btn-secondary" type="submit">
+                        <span class="btn-icon">⇠</span> Выйти из аккаунта
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card hidden page-transition" id="formSection">
+            <h1 style="font-size:24px;margin-bottom:16px;text-align:left">Задайте параметры</h1>
+            <form class="test-form">
+                <input type="hidden" class="choice-hidden" value="">
+                
+                <div class="form-group">
+                    <label class="form-label" for="subnet">Подсеть</label>
+                    <select id="subnet" class="input-field select-field subnet-select" required>
+                        <option value="" disabled selected>Выберите подсеть</option>
+                        <option value="10.10.10.0/24">10.10.10.0/24 (Production)</option>
+                        <option value="172.0.0.0/24">172.0.0.0/24 (Staging)</option>
+                        <option value="192.0.0.0/24">192.0.0.0/24 (Development)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="flavor">Конфигурация</label>
+                    <select id="flavor" class="input-field select-field flavor-select" required>
+                        <option value="" disabled selected>Выберите конфигурацию</option>
+                        <option value="2/4 30%">2 ядра / 4 ГБ RAM (30%)</option>
+                        <option value="4/8 30%">4 ядра / 8 ГБ RAM (30%)</option>
+                        <option value="8/16 30%">8 ядер / 16 ГБ RAM (30%)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="title">Название ВМ</label>
+                    <input id="title" type="text" class="input-field title-inp" placeholder="Например: web-server-prod" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="desc">Описание</label>
+                    <input id="desc" type="text" class="input-field desc-inp" placeholder="Назначение сервера">
+                </div>
+                
+                <div class="form-actions">
+                    <button class="btn btn-primary s-btn" type="button">
+                        <span class="btn-icon">→</span> Создать кластер
+                    </button>
+                    <button class="btn btn-secondary back-btn" type="button">
+                        <span class="btn-icon">⇠</span> Назад
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tg = window.Telegram.WebApp;
+            tg.expand();
+            tg.ready();
+            
+            // Set theme colors
+            document.documentElement.style.setProperty('--tg-theme-link-color', tg.themeParams.link_color || '#4a6cf7');
+            
+            // Page transitions
+            const mainSection = document.getElementById('mainSection');
+            const formSection = document.getElementById('formSection');
+            
+            // Choice cards
+            document.querySelectorAll('.choice-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const choice = card.dataset.choice;
+                    document.querySelector('.choice-hidden').value = choice;
+                    
+                    // Page transition
+                    mainSection.classList.remove('active');
+                    setTimeout(() => {
+                        mainSection.classList.add('hidden');
+                        formSection.classList.remove('hidden');
+                        setTimeout(() => {
+                            formSection.classList.add('active');
+                        }, 50);
+                    }, 300);
+                });
+            });
+            
+            // Back button
+            document.querySelector('.back-btn')?.addEventListener('click', () => {
+                formSection.classList.remove('active');
+                setTimeout(() => {
+                    formSection.classList.add('hidden');
+                    mainSection.classList.remove('hidden');
+                    setTimeout(() => {
+                        mainSection.classList.add('active');
+                    }, 50);
+                }, 300);
+            });
+            
+            // Submit handler
+            document.querySelector('.s-btn')?.addEventListener('click', () => {
+                const title = document.querySelector('.title-inp').value.trim();
+                const description = document.querySelector('.desc-inp').value.trim();
+                const subnet = document.querySelector('.subnet-select').value;
+                const flavor = document.querySelector('.flavor-select').value;
+                const choice = document.querySelector('.choice-hidden').value || "Не выбрано";
+                
+                if (!subnet || !flavor) {
+                    tg.showAlert("Пожалуйста, выберите подсеть и конфигурацию");
+                    return;
+                }
+                
+                if (!title) {
+                    tg.showAlert("Введите название виртуальной машины");
+                    return;
+                }
+                
+                const data = { choice, title, desc: description, subnet, flavor };
+                tg.sendData(JSON.stringify(data));
+                
+                // Show confirmation
+                tg.showAlert(`Запрос на создание ВМ отправлен!\n\nСервис: ${choice}\nКонфигурация: ${flavor}\nПодсеть: ${subnet}`);
+            });
+            
+            // Input animations
+            document.querySelectorAll('.input-field').forEach(input => {
+                input.addEventListener('focus', () => {
+                    input.parentElement?.classList.add('focused');
+                });
+                input.addEventListener('blur', () => {
+                    if (!input.value) {
+                        input.parentElement?.classList.remove('focused');
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>
