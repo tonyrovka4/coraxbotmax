@@ -874,7 +874,7 @@
                     vkAuthBtn.classList.add('hidden');
                 }
                 
-                // Set timeout for iframe loading (30 seconds)
+                // Set timeout for iframe loading (15 seconds)
                 if (vkIframeLoadTimeout) clearTimeout(vkIframeLoadTimeout);
                 vkIframeLoadTimeout = setTimeout(() => {
                     if (vkIframe.classList.contains('hidden')) {
@@ -882,7 +882,7 @@
                         hideVkIframe();
                         tg.showAlert('Превышено время ожидания загрузки VK ID. Попробуйте еще раз.');
                     }
-                }, 30000);
+                }, 15000);
                 
                 console.log('VK One Tap iframe opened, UUID:', uuid);
             }
@@ -1067,8 +1067,10 @@
                     
                     // Handle resize events from VK iframe
                     if (data.type === 'resize' && data.height) {
-                        if (vkIframe) {
-                            vkIframe.style.height = data.height + 'px';
+                        // Validate height is a reasonable positive number (max 2000px)
+                        const height = parseInt(data.height, 10);
+                        if (vkIframe && !isNaN(height) && height > 0 && height <= 2000) {
+                            vkIframe.style.height = height + 'px';
                         }
                         return;
                     }

@@ -17,7 +17,9 @@ from flask import (
 )
 
 app = Flask(__name__, template_folder='.')
-app.secret_key = os.getenv("SECRET_KEY", "change-me-in-prod")
+app.secret_key = os.getenv("SECRET_KEY")
+if not app.secret_key:
+    raise RuntimeError("SECRET_KEY environment variable must be set")
 
 USERNAME = os.getenv("APP_USERNAME", "admin")
 PASSWORD = os.getenv("APP_PASSWORD", "pass123")
@@ -33,8 +35,8 @@ ESIA_CLIENT_SECRET = os.getenv("ESIA_CLIENT_SECRET", "")
 ESIA_REDIRECT_URI = os.getenv("ESIA_REDIRECT_URI", "")
 ESIA_AUTH_URL = os.getenv("ESIA_AUTH_URL", "https://esia-portal1.test.gosuslugi.ru/aas/oauth2/ac")
 
-# App origin for OAuth
-APP_ORIGIN = os.getenv("APP_ORIGIN", "https://176.109.104.88.sslip.io")
+# App origin for OAuth (must be explicitly configured)
+APP_ORIGIN = os.getenv("APP_ORIGIN", "")
 
 
 @app.route("/", methods=["GET"])
@@ -78,6 +80,9 @@ def vk_oauth_init():
     """Initialize VK ID OAuth flow and return iframe URL for One Tap Auth."""
     if not VK_APP_ID:
         return jsonify({"success": False, "error": "VK_APP_ID not configured"}), 500
+
+    if not APP_ORIGIN:
+        return jsonify({"success": False, "error": "APP_ORIGIN not configured"}), 500
 
     # Generate PKCE code verifier and challenge
     code_verifier = generate_code_verifier()
@@ -135,52 +140,48 @@ def vk_oauth_exchange():
     if uuid and stored_uuid and uuid != stored_uuid:
         return jsonify({"success": False, "error": "UUID mismatch"}), 400
 
+    # VK_SERVICE_TOKEN is required for secure token exchange
+    if not VK_SERVICE_TOKEN:
+        return jsonify({"success": False, "error": "VK_SERVICE_TOKEN not configured"}), 500
+
     # Exchange silent_token for access_token using VK API
-    if VK_SERVICE_TOKEN:
-        try:
-            exchange_response = requests.post(
-                'https://api.vk.com/method/auth.exchangeSilentAuthToken',
-                data={
-                    'v': '5.131',
-                    'token': silent_token,
-                    'access_token': VK_SERVICE_TOKEN,
-                    'uuid': uuid or stored_uuid,
-                },
-                timeout=10
-            )
-            result = exchange_response.json()
+    try:
+        exchange_response = requests.post(
+            'https://api.vk.com/method/auth.exchangeSilentAuthToken',
+            data={
+                'v': '5.131',
+                'token': silent_token,
+                'access_token': VK_SERVICE_TOKEN,
+                'uuid': uuid or stored_uuid,
+            },
+            timeout=10
+        )
+        result = exchange_response.json()
 
-            if 'error' in result:
-                return jsonify({
-                    "success": False,
-                    "error": result['error'].get('error_msg', 'Token exchange failed')
-                }), 400
+        if 'error' in result:
+            return jsonify({
+                "success": False,
+                "error": result['error'].get('error_msg', 'Token exchange failed')
+            }), 400
 
-            # Successfully authenticated
-            access_token = result.get('response', {}).get('access_token')
-            user_id = result.get('response', {}).get('user_id')
+        # Successfully authenticated
+        access_token = result.get('response', {}).get('access_token')
+        user_id = result.get('response', {}).get('user_id')
 
-            if access_token:
-                session["is_authed"] = True
-                session["auth_provider"] = "vk"
-                session["vk_user_id"] = user_id
-                # Clean up OAuth session data
-                session.pop('vk_code_verifier', None)
-                session.pop('vk_uuid', None)
+        if access_token:
+            session["is_authed"] = True
+            session["auth_provider"] = "vk"
+            session["vk_user_id"] = user_id
+            # Clean up OAuth session data
+            session.pop('vk_code_verifier', None)
+            session.pop('vk_uuid', None)
 
-                return jsonify({"success": True, "user_id": user_id})
+            return jsonify({"success": True, "user_id": user_id})
 
-        except requests.RequestException as e:
-            return jsonify({"success": False, "error": f"API error: {str(e)}"}), 500
+        return jsonify({"success": False, "error": "No access token in response"}), 400
 
-    # If no service token configured, just authenticate based on silent_token presence
-    # In production, you should always exchange the token
-    session["is_authed"] = True
-    session["auth_provider"] = "vk"
-    session.pop('vk_code_verifier', None)
-    session.pop('vk_uuid', None)
-
-    return jsonify({"success": True})
+    except requests.RequestException as e:
+        return jsonify({"success": False, "error": f"API error: {str(e)}"}), 500
 
 
 @app.route("/oauth/esia/init", methods=["POST"])
@@ -233,46 +234,42 @@ def esia_oauth_callback():
         flash("Ошибка: не получен код авторизации", "error")
         return redirect(url_for("web"))
 
+    # ESIA_CLIENT_SECRET is required for secure token exchange
+    if not ESIA_CLIENT_SECRET:
+        flash("Ошибка: ESIA не полностью настроен", "error")
+        return redirect(url_for("web"))
+
     # Exchange code for access_token
-    if ESIA_CLIENT_SECRET:
-        try:
-            token_url = ESIA_AUTH_URL.replace('/ac', '/te')
-            token_response = requests.post(
-                token_url,
-                data={
-                    'client_id': ESIA_CLIENT_ID,
-                    'client_secret': ESIA_CLIENT_SECRET,
-                    'grant_type': 'authorization_code',
-                    'code': code,
-                    'redirect_uri': ESIA_REDIRECT_URI or f"{APP_ORIGIN}/oauth/esia/callback",
-                },
-                timeout=10
-            )
-            result = token_response.json()
+    try:
+        token_url = ESIA_AUTH_URL.replace('/ac', '/te')
+        token_response = requests.post(
+            token_url,
+            data={
+                'client_id': ESIA_CLIENT_ID,
+                'client_secret': ESIA_CLIENT_SECRET,
+                'grant_type': 'authorization_code',
+                'code': code,
+                'redirect_uri': ESIA_REDIRECT_URI or f"{APP_ORIGIN}/oauth/esia/callback",
+            },
+            timeout=10
+        )
+        result = token_response.json()
 
-            if 'error' in result:
-                flash(f"Ошибка обмена токена: {result.get('error_description', 'Unknown error')}", "error")
-                return redirect(url_for("web"))
-
-            # Successfully authenticated
-            session["is_authed"] = True
-            session["auth_provider"] = "esia"
-            session.pop('esia_state', None)
-
-            flash("Успешная авторизация через Госуслуги", "success")
+        if 'error' in result:
+            flash(f"Ошибка обмена токена: {result.get('error_description', 'Unknown error')}", "error")
             return redirect(url_for("web"))
 
-        except requests.RequestException as e:
-            flash(f"Ошибка API: {str(e)}", "error")
-            return redirect(url_for("web"))
+        # Successfully authenticated
+        session["is_authed"] = True
+        session["auth_provider"] = "esia"
+        session.pop('esia_state', None)
 
-    # If no client secret configured, authenticate based on code presence
-    session["is_authed"] = True
-    session["auth_provider"] = "esia"
-    session.pop('esia_state', None)
+        flash("Успешная авторизация через Госуслуги", "success")
+        return redirect(url_for("web"))
 
-    flash("Успешная авторизация через Госуслуги", "success")
-    return redirect(url_for("web"))
+    except requests.RequestException as e:
+        flash(f"Ошибка API: {str(e)}", "error")
+        return redirect(url_for("web"))
 
 
 if __name__ == "__main__":
