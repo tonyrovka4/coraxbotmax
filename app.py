@@ -21,6 +21,12 @@ app.secret_key = os.getenv("SECRET_KEY")
 if not app.secret_key:
     raise RuntimeError("SECRET_KEY environment variable must be set")
 
+# Session cookie configuration for OAuth flows with external identity providers
+# SameSite=None is required for cross-origin redirects from OAuth providers (e.g., Keycloak)
+# Secure=True is required when SameSite=None (enforced by browsers)
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+app.config['SESSION_COOKIE_SECURE'] = True
+
 USERNAME = os.getenv("APP_USERNAME", "admin")
 PASSWORD = os.getenv("APP_PASSWORD", "pass123")
 
