@@ -30,8 +30,8 @@ if not app.secret_key:
 app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 app.config['SESSION_COOKIE_SECURE'] = True
 
-USERNAME = os.getenv("APP_USERNAME", "admin")
-PASSWORD = os.getenv("APP_PASSWORD", "pass123")
+USERNAME = os.getenv("APP_USERNAME", "")
+PASSWORD = os.getenv("APP_PASSWORD", "")
 
 # VK ID OAuth configuration
 VK_APP_ID = os.getenv("VK_APP_ID", "")
