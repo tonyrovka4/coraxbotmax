@@ -8,6 +8,9 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram.enums.content_type import ContentType
 from aiogram.filters import CommandStart
 from aiogram.enums.parse_mode import ParseMode
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 

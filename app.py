@@ -15,6 +15,9 @@ from flask import (
     flash,
     jsonify,
 )
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__, template_folder='.')
 app.secret_key = os.getenv("SECRET_KEY")
