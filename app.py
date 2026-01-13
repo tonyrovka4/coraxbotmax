@@ -49,7 +49,11 @@ APP_ORIGIN = os.getenv("APP_ORIGIN", "")
 @app.route("/", methods=["GET"])
 def web():
     is_authed = session.get("is_authed", False)
-    return render_template("index.html", is_authed=is_authed)
+    user_info = {
+        "name": session.get("user_name"),
+        "email": session.get("user_email")
+    } if is_authed else None
+    return render_template("index.html", is_authed=is_authed, user_info=user_info)
 
 
 @app.route("/login", methods=["POST"])

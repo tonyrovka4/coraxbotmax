@@ -8,11 +8,18 @@ class CloudManagerApp {
         this.tg = window.Telegram?.WebApp || this.createMockTelegram();
 
         // UI Elements
-        this.mainSection = document.getElementById('mainSection');
+        this.menuSection = document.getElementById('menuSection');
+        this.resourcesSection = document.getElementById('resourcesSection');
+        this.serviceSelectionSection = document.getElementById('serviceSelectionSection');
         this.formSection = document.getElementById('formSection');
 
         // Initialize the application
-        this.init();
+        if (this.menuSection) {
+            this.init();
+        } else {
+            // We might be on the login page (unauthenticated)
+            this.authInit();
+        }
     }
 
     /**
@@ -32,13 +39,24 @@ class CloudManagerApp {
     /**
      * Main initialization sequence
      */
+    /**
+     * Main initialization sequence for authenticated users
+     */
     init() {
         this.setupTelegram();
         this.setupTheme();
-        this.setupAuthButtons();
         this.setupNavigation();
         this.setupForm();
         this.setupInputAnimations();
+    }
+
+    /**
+     * Initialization for unauthenticated users (login page)
+     */
+    authInit() {
+        this.setupTelegram();
+        this.setupTheme();
+        this.setupAuthButtons();
     }
 
     /**
@@ -146,9 +164,23 @@ class CloudManagerApp {
     /**
      * Setup navigation between Main and Form sections
      */
+    /**
+     * Setup navigation between sections
+     */
     setupNavigation() {
-        // Handle choice cards click (Pangolin/Corax)
-        document.querySelectorAll('.choice-card').forEach(card => {
+        // 1. Menu Section Handlers
+        // Resources Button
+        document.querySelector('[data-action="resources"]')?.addEventListener('click', () => {
+            this.switchPage(this.resourcesSection);
+        });
+
+        // Create Resource Button
+        document.querySelector('[data-action="create"]')?.addEventListener('click', () => {
+            this.switchPage(this.serviceSelectionSection);
+        });
+
+        // 2. Service Selection Handlers (Pangolin/Corax)
+        document.querySelectorAll('.choice-card[data-choice]').forEach(card => {
             card.addEventListener('click', () => {
                 const choice = card.dataset.choice;
                 const hiddenInput = document.querySelector('.choice-hidden');
@@ -157,34 +189,54 @@ class CloudManagerApp {
                     hiddenInput.value = choice;
                 }
 
-                this.switchPage('form');
+                this.switchPage(this.formSection);
             });
         });
 
-        // Handle Back button
-        document.querySelector('.back-btn')?.addEventListener('click', () => {
-            this.switchPage('main');
+        // 3. Back Buttons Handlers
+        // Back to Menu (from Resources or Services)
+        document.querySelectorAll('.back-to-menu-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.switchPage(this.menuSection);
+            });
+        });
+
+        // Back to Services (from Form)
+        document.querySelector('.back-to-services-btn')?.addEventListener('click', () => {
+            this.switchPage(this.serviceSelectionSection);
         });
     }
 
     /**
      * Switch visible page with transition effect
      */
-    switchPage(targetPage) {
-        if (!this.mainSection || !this.formSection) return;
+    /**
+     * Switch visible page with transition effect
+     * @param {HTMLElement} targetSection - The section element to show
+     */
+    switchPage(targetSection) {
+        // Find the currently active section
+        const activeSection = document.querySelector('.page-transition.active');
 
-        const current = targetPage === 'form' ? this.mainSection : this.formSection;
-        const next = targetPage === 'form' ? this.formSection : this.mainSection;
+        if (!activeSection || !targetSection || activeSection === targetSection) return;
 
-        current.classList.remove('active');
+        // Start transition out
+        activeSection.classList.remove('active');
 
         setTimeout(() => {
-            current.classList.add('hidden');
-            next.classList.remove('hidden');
+            activeSection.classList.add('hidden');
+            targetSection.classList.remove('hidden');
 
-            // Small delay to trigger transition
+            // Update Header Title depending on section
+            const headerTitle = document.getElementById('headerTitle');
+            if (headerTitle) {
+                if (targetSection === this.menuSection) headerTitle.textContent = 'Меню';
+                else if (targetSection === this.serviceSelectionSection) headerTitle.textContent = 'Выберите сервис';
+            }
+
+            // Small delay to trigger transition in
             setTimeout(() => {
-                next.classList.add('active');
+                targetSection.classList.add('active');
             }, 50);
         }, 300);
     }
