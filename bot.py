@@ -69,11 +69,17 @@ def create_gitlab_project(gl, project_name: str, description: str = "") -> objec
     if not GITLAB_GROUP_ID:
         raise ValueError("GITLAB_GROUP_ID not configured")
     
+    try:
+        group_id = int(GITLAB_GROUP_ID)
+    except ValueError:
+        raise ValueError(f"GITLAB_GROUP_ID must be a valid integer, got: {GITLAB_GROUP_ID}")
+    
     project_data = {
         "name": project_name,
-        "namespace_id": GITLAB_GROUP_ID,
+        "namespace_id": group_id,
         "description": description,
         "visibility": "private",
+        "initialize_with_readme": True,  # Ensures default branch exists
     }
     project = gl.projects.create(project_data)
     logger.info(f"Created GitLab project: {project.web_url}")
@@ -93,6 +99,9 @@ def set_project_variables(project, variables: dict) -> None:
             logger.info(f"Set variable {key} on project {project.name}")
         except gitlab.exceptions.GitlabCreateError as e:
             logger.warning(f"Variable {key} may already exist: {e}")
+        except gitlab.exceptions.GitlabError as e:
+            logger.error(f"Failed to set variable {key}: {e}")
+            raise
 
 
 def create_gitlab_ci_file(project) -> None:
@@ -108,9 +117,12 @@ include:
     file: '{GITLAB_INCLUDE_FILE}'
 """
     
+    # Get the project's default branch
+    default_branch = project.default_branch or "main"
+    
     project.files.create({
         "file_path": ".gitlab-ci.yml",
-        "branch": "main",
+        "branch": default_branch,
         "content": gitlab_ci_content,
         "commit_message": "Add .gitlab-ci.yml with include from central repository",
     })
@@ -119,7 +131,8 @@ include:
 
 def trigger_pipeline(project) -> object:
     """Trigger a pipeline run on the project's default branch."""
-    pipeline = project.pipelines.create({"ref": "main"})
+    default_branch = project.default_branch or "main"
+    pipeline = project.pipelines.create({"ref": default_branch})
     logger.info(f"Triggered pipeline {pipeline.id} for project {project.name}")
     return pipeline
 
