@@ -158,6 +158,16 @@ def create_gitlab_ci_file(project) -> None:
     gitlab_ci_content = """# Auto-generated .gitlab-ci.yml
 # Includes pipeline configuration from central repository
 
+workflow:
+  rules:
+  - if: $CI_PIPELINE_SOURCE == "trigger"
+    when: always
+  - if: $CI_PIPELINE_SOURCE == "web"
+    when: always
+  - if: $CI_PIPELINE_SOURCE == "api"
+    when: always
+  - when: never
+
 # Этот блок выполняется перед КАЖДЫМ джобом в пайплайне
 default:
   before_script:
@@ -172,6 +182,7 @@ default:
     - cp -r $ENGINE_TEMP_DIR/ci .
     - cp -r $ENGINE_TEMP_DIR/terraform-ci .
     - cp -r $ENGINE_TEMP_DIR/terraform .
+    - cp -r $ENGINE_TEMP_DIR/terraform-sg .
     # 4. Выдаем права на исполнение
     - chmod +x ci/scripts/*.sh
     - echo "✅ [Engine] Среда подготовлена. Файлы на месте."
@@ -201,12 +212,13 @@ include:
     file: ci/jobs/connectivity.yml         # Job for Connectivity
   - project: matveykolchuk/coraxci
     ref: main
+    file: terraform-ci/jobs/terraform-sg.yml 
+  - project: matveykolchuk/coraxci
+    ref: main
     file: terraform-ci/jobs/terraform.yml  # Job для Terraform
-  #- local: 'ci/jobs/node_preparation.yml'   # Job подготовки ноды
   - project: matveykolchuk/coraxci
     ref: main
     file: ci/jobs/deploy_node_init.yml     # Job инициализации деплой ноды
-# - local: lvm
   - project: matveykolchuk/coraxci
     ref: main
     file: ci/jobs/archive_deployment.yml   # Job развертывания архива
