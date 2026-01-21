@@ -36,6 +36,16 @@ class CloudManagerApp {
         };
     }
 
+    escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[char]));
+    }
+
     /**
      * Main initialization sequence
      */
@@ -340,13 +350,15 @@ class CloudManagerApp {
                 <div class="status-content">
                     <div class="status-spinner"><span class="spinner"></span></div>
                     <div id="statusText" class="status-text">${message}</div>
+                    <div id="stageStatus" class="stage-status hidden"></div>
                     <div class="progress-container">
                         <div class="progress-bar" id="progressBar"></div>
                     </div>
+                    <div id="stageProgress" class="stage-progress hidden"></div>
                     <div id="statusLinks" class="status-links"></div>
                 </div>
             `;
-            
+        
             const formSection = document.getElementById('formSection');
             if (formSection) {
                 formSection.appendChild(statusSection);
@@ -354,6 +366,10 @@ class CloudManagerApp {
         } else {
             statusSection.classList.remove('hidden');
             document.getElementById('statusText').innerText = message;
+            const stageStatus = document.getElementById('stageStatus');
+            if (stageStatus) stageStatus.classList.add('hidden');
+            const stageProgress = document.getElementById('stageProgress');
+            if (stageProgress) stageProgress.classList.add('hidden');
         }
     }
 
@@ -405,6 +421,8 @@ class CloudManagerApp {
     startStatusPolling(projectId, pipelineId) {
         const progressBar = document.getElementById('progressBar');
         const statusText = document.getElementById('statusText');
+        const stageStatus = document.getElementById('stageStatus');
+        const stageProgress = document.getElementById('stageProgress');
         
         // Clear any existing polling interval
         if (this.statusPollingInterval) {
@@ -441,6 +459,48 @@ class CloudManagerApp {
                         };
                         statusText.innerText = statusMessages[data.status] || `Статус: ${data.status}`;
                     }
+
+                    if (stageStatus) {
+                        if (data.running_stage) {
+                            stageStatus.innerText = `⚡ Сейчас выполняется: ${data.running_stage}`;
+                            stageStatus.classList.remove('hidden');
+                        } else if (Number.isFinite(data.total_stages) && data.total_stages > 0) {
+                            stageStatus.innerText = `Готово этапов: ${data.completed_stages ?? 0} из ${data.total_stages}`;
+                            stageStatus.classList.remove('hidden');
+                        } else {
+                            stageStatus.classList.add('hidden');
+                        }
+                    }
+
+                    if (stageProgress) {
+                        if (Array.isArray(data.stages) && data.stages.length) {
+                            stageProgress.innerHTML = data.stages.map(stage => {
+                                const safeStatus = ['pending', 'queued', 'running', 'completed', 'failed', 'canceled'].includes(stage.status)
+                                    ? stage.status
+                                    : 'pending';
+                                const statusClass = `stage-pill stage-${safeStatus}`;
+                                const safePercent = Number.isFinite(stage.percent)
+                                    ? Math.min(Math.max(stage.percent, 0), 100)
+                                    : 0;
+                                const stagePercent = `${safePercent}%`;
+                                const stageName = this.escapeHtml(stage.name || 'unknown');
+                                return `
+                                    <div class="stage-row">
+                                        <div class="${statusClass}">
+                                            <span>${stageName}</span>
+                                            <span>${stagePercent}</span>
+                                        </div>
+                                        <div class="stage-meter">
+                                            <span style="width: ${stagePercent}"></span>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('');
+                            stageProgress.classList.remove('hidden');
+                        } else {
+                            stageProgress.classList.add('hidden');
+                        }
+                    }
                     
                     // Stop polling when pipeline is complete
                     if (['success', 'failed', 'canceled', 'skipped'].includes(data.status)) {
@@ -457,6 +517,10 @@ class CloudManagerApp {
                             } else if (data.status === 'failed') {
                                 progressBar.classList.add('progress-failed');
                             }
+                        }
+                        if (stageStatus && data.running_stage) {
+                            stageStatus.innerText = `Готово! Последний этап: ${data.running_stage}`;
+                            stageStatus.classList.remove('hidden');
                         }
                         return;
                     }

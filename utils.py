@@ -329,22 +329,87 @@ def get_pipeline_status(project_id: int, pipeline_id: int) -> dict:
     gl = get_gitlab_client()
     project = gl.projects.get(project_id)
     pipeline = project.pipelines.get(pipeline_id)
+    jobs = pipeline.jobs.list(per_page=200, get_all=True)
     
-    # Calculate approximate progress based on status
     status = pipeline.status
-    progress_map = {
-        "pending": 0,
-        "running": 50,
-        "success": 100,
-        "failed": 100,
-        "canceled": 100,
-        "skipped": 100,
-        "manual": 0,
-        "scheduled": 0,
-    }
-    
+    completed_statuses = {"success", "failed", "canceled", "skipped"}
+    running_statuses = {"running"}
+    pending_statuses = {"pending", "manual", "scheduled"}
+    active_jobs = [job for job in jobs if job.status in running_statuses]
+    has_jobs = len(jobs) > 0
+    running_stage = active_jobs[0].stage if active_jobs else None
+
+    stage_order = []
+    stage_buckets = {}
+    for job in jobs:
+        stage_name = job.stage or "unknown"
+        stage_buckets.setdefault(stage_name, []).append(job)
+        if stage_name not in stage_order:
+            stage_order.append(stage_name)
+
+    stages = []
+    for stage_name in stage_order:
+        stage_jobs = stage_buckets[stage_name]
+        stage_total = len(stage_jobs)
+        stage_done = len([job for job in stage_jobs if job.status in completed_statuses])
+        stage_running = len([job for job in stage_jobs if job.status in running_statuses])
+        stage_failed = len([job for job in stage_jobs if job.status == "failed"])
+        stage_canceled = len([job for job in stage_jobs if job.status == "canceled"])
+        stage_percent = int((stage_done / stage_total) * 100) if stage_total else 0
+        if stage_running and stage_percent < 95:
+            stage_percent = max(stage_percent, 5)
+        if stage_failed:
+            stage_status = "failed"
+        elif stage_canceled:
+            stage_status = "canceled"
+        elif stage_done == stage_total and stage_total:
+            stage_status = "completed"
+        elif stage_running:
+            stage_status = "running"
+        elif stage_done:
+            stage_status = "queued"
+        else:
+            stage_status = "pending"
+        stages.append({
+            "name": stage_name,
+            "status": stage_status,
+            "percent": stage_percent,
+            "completed_jobs": stage_done,
+            "total_jobs": stage_total,
+        })
+
+    completed_stages = len([stage for stage in stages if stage["status"] in {"completed", "failed", "canceled"}])
+    total_stages = len(stages)
+    running_stage_info = next((stage for stage in stages if stage["status"] == "running"), None)
+    running_stage = running_stage_info["name"] if running_stage_info else running_stage
+    if status in completed_statuses:
+        percent = 100
+    elif status in pending_statuses and completed_stages == 0 and not running_stage_info:
+        percent = 0
+    elif total_stages:
+        running_progress = (running_stage_info["percent"] / 100) if running_stage_info else 0
+        percent = int(((completed_stages + running_progress) / total_stages) * 100)
+        if running_stage_info and percent < 95:
+            percent = max(percent, 5)
+    else:
+        progress_map = {
+            "pending": 0,
+            "running": 50,
+            "success": 100,
+            "failed": 100,
+            "canceled": 100,
+            "skipped": 100,
+            "manual": 0,
+            "scheduled": 0,
+        }
+        percent = progress_map.get(status, 0)
+
     return {
         "status": status,
-        "percent": progress_map.get(status, 0),
+        "percent": percent,
         "web_url": pipeline.web_url,
+        "running_stage": running_stage,
+        "completed_stages": completed_stages,
+        "total_stages": total_stages,
+        "stages": stages,
     }
