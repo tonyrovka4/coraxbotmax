@@ -4,6 +4,7 @@ import hashlib
 import base64
 import urllib.parse
 import json
+import logging
 
 import requests
 from flask import (
@@ -18,7 +19,13 @@ from flask import (
 )
 from dotenv import load_dotenv
 
+# Import GitLab utility functions for cluster creation
+from utils import setup_gitlab_project, get_pipeline_status
+
 load_dotenv()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__, template_folder='.')
 app.secret_key = os.getenv("SECRET_KEY")
@@ -276,6 +283,78 @@ def get_all_vms_in_cloud(cloud_project_id_for_token):
     vms_data = response.json()
     total_vms = vms_data.get("total", 0)
     return total_vms
+
+
+@app.route('/api/create-cluster', methods=['POST'])
+def create_cluster_api():
+    """
+    API endpoint to create a GitLab project and trigger the pipeline.
+    This replaces the previous flow through the bot (sendData).
+    """
+    # Check if user is authenticated
+    if not session.get("is_authed"):
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+    
+    data = request.json
+    if not data:
+        return jsonify({"success": False, "error": "No data provided"}), 400
+    
+    # Validate required fields
+    required_fields = ['title', 'subnet', 'flavor']
+    for field in required_fields:
+        if not data.get(field):
+            return jsonify({"success": False, "error": f"Missing required field: {field}"}), 400
+    
+    try:
+        # Execute GitLab project setup (previously in bot.py)
+        result = setup_gitlab_project(
+            cloud_project_id=data.get('cloud_project_id', ''),
+            project_name=data['title'],
+            description=data.get('desc', ''),
+            subnet=data['subnet'],
+            flavor=data['flavor']
+        )
+        
+        logger.info(f"Created cluster project: {result['project_url']}")
+        
+        # Return JSON with URLs, keeping the window open
+        return jsonify({
+            "success": True,
+            "pipeline_url": result['pipeline_url'],
+            "pipeline_id": result['pipeline_id'],
+            "project_url": result['project_url'],
+            "project_id": result['project_id']
+        })
+        
+    except ValueError as e:
+        logger.error(f"Configuration error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error creating cluster: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/pipeline-status/<int:project_id>/<int:pipeline_id>')
+def check_pipeline_status(project_id, pipeline_id):
+    """
+    API endpoint to check the status of a GitLab pipeline.
+    Frontend polls this endpoint to show real-time progress.
+    """
+    # Check if user is authenticated
+    if not session.get("is_authed"):
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+    
+    try:
+        status_info = get_pipeline_status(project_id, pipeline_id)
+        return jsonify({
+            "success": True,
+            "status": status_info['status'],
+            "percent": status_info['percent'],
+            "web_url": status_info['web_url']
+        })
+    except Exception as e:
+        logger.error(f"Error checking pipeline status: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 if __name__ == "__main__":

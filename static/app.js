@@ -48,6 +48,7 @@ class CloudManagerApp {
         this.setupNavigation();
         this.setupForm();
         this.setupInputAnimations();
+        this.setupCleanup();
     }
 
     /**
@@ -253,13 +254,14 @@ class CloudManagerApp {
     /**
      * Validate and process form data
      */
-    handleFormSubmit() {
+    async handleFormSubmit() {
         const titleInput = document.querySelector('.title-inp');
         const descInput = document.querySelector('.desc-inp');
         const subnetSelect = document.querySelector('.subnet-select');
         const flavorSelect = document.querySelector('.flavor-select');
         const choiceInput = document.querySelector('.choice-hidden');
         const cloudProjectIdInput = document.querySelector('.cloud-project-id-hidden');
+        const submitBtn = document.querySelector('.s-btn');
 
         if (!titleInput || !subnetSelect || !flavorSelect) return;
 
@@ -281,10 +283,233 @@ class CloudManagerApp {
         }
 
         const data = { choice, title, desc: description, subnet, flavor, cloud_project_id: cloudProjectId };
-        this.tg.sendData(JSON.stringify(data));
 
-        // Show confirmation
-        this.tg.showAlert(`Запрос на создание ВМ отправлен!\n\nСервис: ${choice}\nКонфигурация: ${flavor}\nПодсеть: ${subnet}`);
+        // Show loading state
+        if (submitBtn) {
+            this.setButtonLoading(submitBtn, true);
+        }
+
+        // Show status section
+        this.showStatusSection('Создание проекта...');
+
+        try {
+            // Send request to backend API instead of using sendData
+            const response = await fetch('/api/create-cluster', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Update status with pipeline info
+                this.updateStatusSection(
+                    'Пайплайн запущен',
+                    result.pipeline_url,
+                    result.project_url
+                );
+
+                // Start polling for pipeline status
+                this.startStatusPolling(result.project_id, result.pipeline_id);
+            } else {
+                this.showStatusError(result.error || 'Ошибка создания кластера');
+            }
+        } catch (error) {
+            console.error('Error creating cluster:', error);
+            this.showStatusError(`Ошибка подключения: ${error.message}`);
+        } finally {
+            if (submitBtn) {
+                this.setButtonLoading(submitBtn, false);
+            }
+        }
+    }
+
+    /**
+     * Show the status section with initial message
+     */
+    showStatusSection(message) {
+        let statusSection = document.getElementById('statusSection');
+        
+        if (!statusSection) {
+            // Create status section if it doesn't exist
+            statusSection = document.createElement('div');
+            statusSection.id = 'statusSection';
+            statusSection.className = 'status-section';
+            statusSection.innerHTML = `
+                <div class="status-content">
+                    <div class="status-spinner"><span class="spinner"></span></div>
+                    <div id="statusText" class="status-text">${message}</div>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+                    <div id="statusLinks" class="status-links"></div>
+                </div>
+            `;
+            
+            const formSection = document.getElementById('formSection');
+            if (formSection) {
+                formSection.appendChild(statusSection);
+            }
+        } else {
+            statusSection.classList.remove('hidden');
+            document.getElementById('statusText').innerText = message;
+        }
+    }
+
+    /**
+     * Update status section with pipeline info and links
+     */
+    updateStatusSection(message, pipelineUrl, projectUrl) {
+        const statusText = document.getElementById('statusText');
+        const statusLinks = document.getElementById('statusLinks');
+        
+        if (statusText) {
+            statusText.innerText = message;
+        }
+        
+        if (statusLinks) {
+            statusLinks.innerHTML = `
+                <a href="${pipelineUrl}" target="_blank" class="status-link">
+                    🚀 Открыть Pipeline
+                </a>
+                <a href="${projectUrl}" target="_blank" class="status-link">
+                    📁 Открыть проект
+                </a>
+            `;
+        }
+    }
+
+    /**
+     * Show error in status section
+     */
+    showStatusError(errorMessage) {
+        const statusSection = document.getElementById('statusSection');
+        if (statusSection) {
+            const spinner = statusSection.querySelector('.status-spinner');
+            if (spinner) spinner.classList.add('hidden');
+            
+            const statusText = document.getElementById('statusText');
+            if (statusText) {
+                statusText.innerText = `❌ ${errorMessage}`;
+                statusText.classList.add('status-error');
+            }
+        } else {
+            this.tg.showAlert(errorMessage);
+        }
+    }
+
+    /**
+     * Start polling for pipeline status updates
+     */
+    startStatusPolling(projectId, pipelineId) {
+        const progressBar = document.getElementById('progressBar');
+        const statusText = document.getElementById('statusText');
+        
+        // Clear any existing polling interval
+        if (this.statusPollingInterval) {
+            clearInterval(this.statusPollingInterval);
+        }
+        
+        let errorCount = 0;
+        const maxErrors = 3;
+        let pollInterval = 5000; // Start with 5 seconds
+        
+        const poll = async () => {
+            try {
+                const res = await fetch(`/api/pipeline-status/${projectId}/${pipelineId}`);
+                const data = await res.json();
+                
+                if (data.success) {
+                    errorCount = 0; // Reset error count on success
+                    
+                    // Update progress bar
+                    if (progressBar) {
+                        progressBar.style.width = `${data.percent}%`;
+                    }
+                    
+                    // Update status text
+                    if (statusText) {
+                        const statusMessages = {
+                            'pending': 'Ожидание запуска...',
+                            'running': `Выполнение... ${data.percent}%`,
+                            'success': '✅ Пайплайн успешно завершен!',
+                            'failed': '❌ Пайплайн завершился с ошибкой',
+                            'canceled': '⚠️ Пайплайн отменен',
+                            'skipped': '⏭️ Пайплайн пропущен',
+                            'manual': '⏸️ Ожидание ручного запуска'
+                        };
+                        statusText.innerText = statusMessages[data.status] || `Статус: ${data.status}`;
+                    }
+                    
+                    // Stop polling when pipeline is complete
+                    if (['success', 'failed', 'canceled', 'skipped'].includes(data.status)) {
+                        this.stopStatusPolling();
+                        
+                        // Hide spinner when complete
+                        const spinner = document.querySelector('.status-spinner');
+                        if (spinner) spinner.classList.add('hidden');
+                        
+                        // Update progress bar color on completion
+                        if (progressBar) {
+                            if (data.status === 'success') {
+                                progressBar.classList.add('progress-success');
+                            } else if (data.status === 'failed') {
+                                progressBar.classList.add('progress-failed');
+                            }
+                        }
+                        return;
+                    }
+                    
+                    // Increase poll interval for long-running pipelines (max 30 seconds)
+                    if (pollInterval < 30000) {
+                        pollInterval = Math.min(pollInterval * 1.2, 30000);
+                    }
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+            } catch (error) {
+                console.error('Error polling pipeline status:', error);
+                errorCount++;
+                
+                if (errorCount >= maxErrors) {
+                    this.stopStatusPolling();
+                    if (statusText) {
+                        statusText.innerText = '⚠️ Не удалось получить статус пайплайна';
+                    }
+                    return;
+                }
+            }
+            
+            // Schedule next poll
+            this.statusPollingTimeout = setTimeout(poll, pollInterval);
+        };
+        
+        // Start polling
+        poll();
+    }
+    
+    /**
+     * Stop polling for pipeline status
+     */
+    stopStatusPolling() {
+        if (this.statusPollingInterval) {
+            clearInterval(this.statusPollingInterval);
+            this.statusPollingInterval = null;
+        }
+        if (this.statusPollingTimeout) {
+            clearTimeout(this.statusPollingTimeout);
+            this.statusPollingTimeout = null;
+        }
+    }
+    
+    /**
+     * Setup cleanup handlers for page unload
+     */
+    setupCleanup() {
+        window.addEventListener('beforeunload', () => {
+            this.stopStatusPolling();
+        });
     }
 
     /**
