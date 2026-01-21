@@ -48,6 +48,7 @@ class CloudManagerApp {
         this.setupNavigation();
         this.setupForm();
         this.setupInputAnimations();
+        this.setupCleanup();
     }
 
     /**
@@ -405,12 +406,23 @@ class CloudManagerApp {
         const progressBar = document.getElementById('progressBar');
         const statusText = document.getElementById('statusText');
         
-        const interval = setInterval(async () => {
+        // Clear any existing polling interval
+        if (this.statusPollingInterval) {
+            clearInterval(this.statusPollingInterval);
+        }
+        
+        let errorCount = 0;
+        const maxErrors = 3;
+        let pollInterval = 5000; // Start with 5 seconds
+        
+        const poll = async () => {
             try {
                 const res = await fetch(`/api/pipeline-status/${projectId}/${pipelineId}`);
                 const data = await res.json();
                 
                 if (data.success) {
+                    errorCount = 0; // Reset error count on success
+                    
                     // Update progress bar
                     if (progressBar) {
                         progressBar.style.width = `${data.percent}%`;
@@ -432,7 +444,7 @@ class CloudManagerApp {
                     
                     // Stop polling when pipeline is complete
                     if (['success', 'failed', 'canceled', 'skipped'].includes(data.status)) {
-                        clearInterval(interval);
+                        this.stopStatusPolling();
                         
                         // Hide spinner when complete
                         const spinner = document.querySelector('.status-spinner');
@@ -446,15 +458,58 @@ class CloudManagerApp {
                                 progressBar.classList.add('progress-failed');
                             }
                         }
+                        return;
                     }
+                    
+                    // Increase poll interval for long-running pipelines (max 30 seconds)
+                    if (pollInterval < 30000) {
+                        pollInterval = Math.min(pollInterval * 1.2, 30000);
+                    }
+                } else {
+                    throw new Error(data.error || 'Unknown error');
                 }
             } catch (error) {
                 console.error('Error polling pipeline status:', error);
+                errorCount++;
+                
+                if (errorCount >= maxErrors) {
+                    this.stopStatusPolling();
+                    if (statusText) {
+                        statusText.innerText = '⚠️ Не удалось получить статус пайплайна';
+                    }
+                    return;
+                }
             }
-        }, 5000); // Poll every 5 seconds
+            
+            // Schedule next poll
+            this.statusPollingTimeout = setTimeout(poll, pollInterval);
+        };
         
-        // Store interval ID for potential cleanup
-        this.statusPollingInterval = interval;
+        // Start polling
+        poll();
+    }
+    
+    /**
+     * Stop polling for pipeline status
+     */
+    stopStatusPolling() {
+        if (this.statusPollingInterval) {
+            clearInterval(this.statusPollingInterval);
+            this.statusPollingInterval = null;
+        }
+        if (this.statusPollingTimeout) {
+            clearTimeout(this.statusPollingTimeout);
+            this.statusPollingTimeout = null;
+        }
+    }
+    
+    /**
+     * Setup cleanup handlers for page unload
+     */
+    setupCleanup() {
+        window.addEventListener('beforeunload', () => {
+            this.stopStatusPolling();
+        });
     }
 
     /**
