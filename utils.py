@@ -354,7 +354,7 @@ def get_pipeline_status(project_id: int, pipeline_id: int) -> dict:
         stage_running = len([job for job in stage_jobs if job.status in running_statuses])
         stage_failed = len([job for job in stage_jobs if job.status == "failed"])
         stage_canceled = len([job for job in stage_jobs if job.status == "canceled"])
-        stage_percent = int((stage_done / stage_total) * 100) if stage_total else 0
+        stage_percent = int((stage_done / stage_total) * 100) if stage_total > 0 else 0
         if stage_running and stage_percent < almost_complete_threshold:
             stage_percent = max(stage_percent, min_running_progress)
         if stage_failed:
