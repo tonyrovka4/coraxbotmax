@@ -337,7 +337,6 @@ def get_pipeline_status(project_id: int, pipeline_id: int) -> dict:
     pending_statuses = {"pending", "manual", "scheduled"}
     min_running_progress = 5
     almost_complete_threshold = 95
-    has_jobs = len(jobs) > 0
 
     stage_order = []
     stage_buckets = {}

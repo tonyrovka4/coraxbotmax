@@ -36,16 +36,6 @@ class CloudManagerApp {
         };
     }
 
-    escapeHtml(value) {
-        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;'
-        }[char]));
-    }
-
     /**
      * Main initialization sequence
      */
@@ -474,28 +464,44 @@ class CloudManagerApp {
 
                     if (stageProgress) {
                         if (Array.isArray(data.stages) && data.stages.length) {
-                            stageProgress.innerHTML = data.stages.map(stage => {
+                            stageProgress.replaceChildren();
+                            data.stages.forEach(stage => {
                                 const safeStatus = ['pending', 'queued', 'running', 'completed', 'failed', 'canceled'].includes(stage.status)
                                     ? stage.status
                                     : 'pending';
-                                const statusClass = `stage-pill stage-${safeStatus}`;
                                 const safePercent = Number.isFinite(stage.percent)
                                     ? Math.min(Math.max(stage.percent, 0), 100)
                                     : 0;
                                 const stagePercent = `${safePercent}%`;
-                                const stageName = this.escapeHtml(stage.name || 'unknown');
-                                return `
-                                    <div class="stage-row">
-                                        <div class="${statusClass}">
-                                            <span>${stageName}</span>
-                                            <span>${stagePercent}</span>
-                                        </div>
-                                        <div class="stage-meter">
-                                            <span style="width: ${stagePercent}"></span>
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('');
+                                const stageName = stage.name || 'unknown';
+
+                                const stageRow = document.createElement('div');
+                                stageRow.className = 'stage-row';
+
+                                const stagePill = document.createElement('div');
+                                stagePill.className = `stage-pill stage-${safeStatus}`;
+
+                                const nameSpan = document.createElement('span');
+                                nameSpan.textContent = stageName;
+
+                                const percentSpan = document.createElement('span');
+                                percentSpan.textContent = stagePercent;
+
+                                stagePill.appendChild(nameSpan);
+                                stagePill.appendChild(percentSpan);
+
+                                const stageMeter = document.createElement('div');
+                                stageMeter.className = 'stage-meter';
+
+                                const meterFill = document.createElement('span');
+                                meterFill.style.width = stagePercent;
+
+                                stageMeter.appendChild(meterFill);
+                                stageRow.appendChild(stagePill);
+                                stageRow.appendChild(stageMeter);
+
+                                stageProgress.appendChild(stageRow);
+                            });
                             stageProgress.classList.remove('hidden');
                         } else {
                             stageProgress.classList.add('hidden');
@@ -519,9 +525,16 @@ class CloudManagerApp {
                             }
                         }
                         if (stageStatus && Array.isArray(data.stages)) {
-                            const lastStage = [...data.stages].reverse().find(stage => ['completed', 'failed', 'canceled'].includes(stage.status));
+                            let lastStage = null;
+                            for (let i = data.stages.length - 1; i >= 0; i -= 1) {
+                                const stage = data.stages[i];
+                                if (['completed', 'failed', 'canceled'].includes(stage.status)) {
+                                    lastStage = stage;
+                                    break;
+                                }
+                            }
                             if (lastStage) {
-                                stageStatus.innerText = `Готово! Последний этап: ${this.escapeHtml(lastStage.name || 'unknown')}`;
+                                stageStatus.innerText = `Готово! Последний этап: ${lastStage.name || 'unknown'}`;
                                 stageStatus.classList.remove('hidden');
                             }
                         }
