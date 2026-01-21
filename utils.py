@@ -337,11 +337,12 @@ def get_pipeline_status(project_id: int, pipeline_id: int) -> dict:
     pending_statuses = {"pending", "manual", "scheduled"}
     min_running_progress = 5
     almost_complete_threshold = 95
+    unknown_stage = "unknown"
 
     stage_order = []
     stage_buckets = {}
     for job in jobs:
-        stage_name = job.stage or "unknown"
+        stage_name = job.stage or unknown_stage
         stage_buckets.setdefault(stage_name, []).append(job)
         if stage_name not in stage_order:
             stage_order.append(stage_name)

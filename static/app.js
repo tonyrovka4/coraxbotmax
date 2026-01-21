@@ -6,6 +6,7 @@ class CloudManagerApp {
     constructor() {
         // Initialize Telegram WebApp or fallback
         this.tg = window.Telegram?.WebApp || this.createMockTelegram();
+        this.unknownStageLabel = 'unknown';
 
         // UI Elements
         this.menuSection = document.getElementById('menuSection');
@@ -473,7 +474,7 @@ class CloudManagerApp {
                                     ? Math.min(Math.max(stage.percent, 0), 100)
                                     : 0;
                                 const stagePercent = `${safePercent}%`;
-                                const stageName = stage.name || 'unknown';
+                                const stageName = stage.name || this.unknownStageLabel;
 
                                 const stageRow = document.createElement('div');
                                 stageRow.className = 'stage-row';
@@ -527,7 +528,7 @@ class CloudManagerApp {
                         if (stageStatus && Array.isArray(data.stages)) {
                             const lastStage = data.stages.slice().reverse().find(stage => ['completed', 'failed', 'canceled'].includes(stage.status));
                             if (lastStage) {
-                                stageStatus.innerText = `Готово! Последний этап: ${lastStage.name || 'unknown'}`;
+                                stageStatus.innerText = `Готово! Последний этап: ${lastStage.name || this.unknownStageLabel}`;
                                 stageStatus.classList.remove('hidden');
                             }
                         }
