@@ -1,6 +1,6 @@
 # Corax Bot - Cloud Manager
 
-Telegram bot with mini-app for managing cloud resources and deploying Corax clusters via GitLab CI/CD.
+Max bot with mini-app for managing cloud resources and deploying Corax clusters via GitLab CI/CD.
 
 ## Setup
 
@@ -15,8 +15,8 @@ pip install -r requirements.txt
 Create a `.env` file with the following variables:
 
 ```bash
-# Telegram Bot
-TOKEN=your_telegram_bot_token
+# Max Bot
+TOKEN=your_max_bot_token
 
 # Flask
 SECRET_KEY=your_secret_key

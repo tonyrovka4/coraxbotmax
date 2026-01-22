@@ -3,11 +3,8 @@ import logging
 import json
 import os
 
-from aiogram import Bot, Dispatcher, types, F
-from aiogram.utils.keyboard import ReplyKeyboardBuilder
-from aiogram.enums.content_type import ContentType
-from aiogram.filters import CommandStart
-from aiogram.enums.parse_mode import ParseMode
+from maxapi import Bot, Dispatcher, types, F
+from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 from dotenv import load_dotenv
 import gitlab
 
@@ -23,20 +20,27 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-bot = Bot(os.getenv("TOKEN"))
+bot = Bot(token=os.getenv("TOKEN"))
 dp = Dispatcher()
 
 
-@dp.message(CommandStart())
-async def start(message: types.Message):
-    webAppInfo = types.WebAppInfo(url="https://176.123.163.57.sslip.io")
-    builder = ReplyKeyboardBuilder()
-    builder.add(types.KeyboardButton(text='PaaS Cloud manager', web_app=webAppInfo))
-    await message.answer(text='Пройдите аутентификацию', reply_markup=builder.as_markup())
+@dp.message_created(types.CommandStart())
+async def start(message: types.MessageCreated):
+    builder = InlineKeyboardBuilder()
+    builder.add(
+        types.LinkButton(
+            text="PaaS Cloud manager",
+            url="https://176.123.163.57.sslip.io",
+        )
+    )
+    await message.message.answer(
+        "Пройдите аутентификацию",
+        attachments=[builder.as_markup()],
+    )
 
-# @dp.message(F.content_type == ContentType.WEB_APP_DATA)
-# async def parse_data(message: types.Message):
-#     data = json.loads(message.web_app_data.data)
+# @dp.message_created(F.message.body.text)
+# async def parse_data(message: types.MessageCreated):
+#     data = json.loads(message.message.body.text)
 
 #     # Build response with header from chosen option
 #     header = data.get("choice", "Не выбрано")
@@ -56,23 +60,23 @@ async def start(message: types.Message):
 #         f"<b>Флейвор ВМ:</b> {flavor}"
 #     )
 
-#     await message.answer(reply, parse_mode=ParseMode.HTML)
+#     await message.message.answer(reply, parse_mode="HTML")
 
 #     # Process Corax requests - create GitLab project and trigger pipeline
 #     if header == "Corax" and cloud_project_id:
 #     #print(cloud_project_id)
 #     #if header == "Corax":
 #         if not GITLAB_URL or not GITLAB_TOKEN:
-#             await message.answer(
+#             await message.message.answer(
 #                 "⚠️ <b>GitLab не настроен</b>\n\n"
 #                 "Для создания проекта необходимо настроить переменные окружения GitLab.",
-#                 parse_mode=ParseMode.HTML
+#                 parse_mode="HTML"
 #             )
 #             return
 
-#         await message.answer(
+#         await message.message.answer(
 #             "⏳ <b>Создание проекта в GitLab...</b>",
-#             parse_mode=ParseMode.HTML
+#             parse_mode="HTML"
 #         )
 
 #         try:
@@ -93,29 +97,28 @@ async def start(message: types.Message):
 #                 f"• SUBNET_ADDRESS, SUBNET_MASK\n"
 #                 f"• VM_CPU, VM_RAM, VM_OVERCOMMIT"
 #             )
-#             await message.answer(success_reply, parse_mode=ParseMode.HTML)
+#             await message.message.answer(success_reply, parse_mode="HTML")
 
 #         except ValueError as e:
-#             await message.answer(
+#             await message.message.answer(
 #                 f"❌ <b>Ошибка конфигурации:</b>\n{str(e)}",
-#                 parse_mode=ParseMode.HTML
+#                 parse_mode="HTML"
 #             )
 #         except gitlab.exceptions.GitlabError as e:
 #             logger.error(f"GitLab API error: {e}")
-#             await message.answer(
+#             await message.message.answer(
 #                 f"❌ <b>Ошибка GitLab API:</b>\n{str(e)}",
-#                 parse_mode=ParseMode.HTML
+#                 parse_mode="HTML"
 #             )
 #         except Exception as e:
 #             logger.error(f"Unexpected error during GitLab setup: {e}")
-#             await message.answer(
+#             await message.message.answer(
 #                 f"❌ <b>Неожиданная ошибка:</b>\n{str(e)}",
-#                 parse_mode=ParseMode.HTML
+#                 parse_mode="HTML"
 #             )
 
 async def main():
-    await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+    await dp.start_polling(bot, skip_updates=True)
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -1,11 +1,16 @@
 /**
  * Cloud Manager Application
- * Handles Telegram WebApp integration, Authentication, and Form management
+ * Handles Max WebApp integration, Authentication, and Form management
  */
 class CloudManagerApp {
     constructor() {
-        // Initialize Telegram WebApp or fallback
-        this.tg = window.Telegram?.WebApp || this.createMockTelegram();
+        // Initialize Max WebApp or fallback
+        this.webapp = window.WebApp || this.createMockWebApp();
+        if (!window.WebApp) {
+            window.addEventListener('max-web-app-ready', () => {
+                this.webapp = window.WebApp || this.webapp;
+            });
+        }
         this.unknownStageLabel = 'unknown';
 
         // UI Elements
@@ -24,16 +29,17 @@ class CloudManagerApp {
     }
 
     /**
-     * Create a mock Telegram WebApp object for testing outside Telegram
+     * Create a mock Max WebApp object for testing outside Max
      */
-    createMockTelegram() {
+    createMockWebApp() {
         return {
             expand: () => { },
             ready: () => { },
             showAlert: (msg) => alert(msg),
-            sendData: (data) => console.log('Telegram sendData:', data),
+            sendData: (data) => console.log('WebApp sendData:', data),
             themeParams: {},
-            openLink: (url) => window.open(url, '_blank')
+            openLink: (url) => window.open(url, '_blank'),
+            close: () => window.close()
         };
     }
 
@@ -44,7 +50,7 @@ class CloudManagerApp {
      * Main initialization sequence for authenticated users
      */
     init() {
-        this.setupTelegram();
+        this.setupWebApp();
         this.setupTheme();
         this.setupNavigation();
         this.setupForm();
@@ -56,30 +62,30 @@ class CloudManagerApp {
      * Initialization for unauthenticated users (login page)
      */
     authInit() {
-        this.setupTelegram();
+        this.setupWebApp();
         this.setupTheme();
         this.setupAuthButtons();
     }
 
     /**
-     * Configure Telegram WebApp environment
+     * Configure Max WebApp environment
      */
-    setupTelegram() {
+    setupWebApp() {
         try {
-            this.tg.expand();
-            this.tg.ready();
+            this.webapp.expand();
+            this.webapp.ready();
         } catch (e) {
-            console.log('Running outside Telegram environment');
+            console.log('Running outside Max WebApp environment');
         }
     }
 
     /**
-     * Apply Telegram theme colors to CSS variables
+     * Apply Max WebApp theme colors to CSS variables
      */
     setupTheme() {
         document.documentElement.style.setProperty(
-            '--tg-theme-link-color',
-            this.tg.themeParams?.link_color || '#4a6cf7'
+            '--webapp-theme-link-color',
+            this.webapp.themeParams?.link_color || '#4a6cf7'
         );
     }
 
@@ -133,7 +139,7 @@ class CloudManagerApp {
                 } catch (error) {
                     console.error(`${provider} OAuth error:`, error);
                     this.setButtonLoading(btn, false);
-                    this.tg.showAlert(`Ошибка подключения к ${provider}: ${error.message}`);
+                    this.webapp.showAlert(`Ошибка подключения к ${provider}: ${error.message}`);
                 }
             });
         });
@@ -153,13 +159,13 @@ class CloudManagerApp {
             } else {
                 // Fallback or specific logical branches if needed
                 this.setButtonLoading(btn, false);
-                this.tg.showAlert('Успешная инициализация, но URL для перехода не получен');
+                this.webapp.showAlert('Успешная инициализация, но URL для перехода не получен');
             }
         } else {
             // Revert state and show error
             this.setButtonLoading(btn, false);
             const errorMsg = data.error || 'Ошибка инициализации';
-            this.tg.showAlert(errorMsg);
+            this.webapp.showAlert(errorMsg);
         }
     }
 
@@ -274,12 +280,12 @@ class CloudManagerApp {
         const cloudProjectId = cloudProjectIdInput ? cloudProjectIdInput.value : '';
 
         if (!subnet || !flavor) {
-            this.tg.showAlert("Пожалуйста, выберите подсеть и конфигурацию");
+            this.webapp.showAlert("Пожалуйста, выберите подсеть и конфигурацию");
             return;
         }
 
         if (!title) {
-            this.tg.showAlert("Введите название виртуальной машины");
+            this.webapp.showAlert("Введите название виртуальной машины");
             return;
         }
 
@@ -402,7 +408,7 @@ class CloudManagerApp {
                 statusText.classList.add('status-error');
             }
         } else {
-            this.tg.showAlert(errorMessage);
+            this.webapp.showAlert(errorMessage);
         }
     }
 

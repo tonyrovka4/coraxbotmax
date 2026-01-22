@@ -1,5 +1,5 @@
 flask>=2.0.0
-aiogram>=3.0.0
+maxapi
 requests>=2.25.0
 python-dotenv>=1.2.1
 python-gitlab>=4.4.0
