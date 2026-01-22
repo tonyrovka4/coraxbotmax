@@ -4,13 +4,27 @@
  */
 class CloudManagerApp {
     constructor() {
-        // Initialize Max WebApp or fallback
-        this.webapp = window.WebApp || this.createMockWebApp();
-        if (!window.WebApp) {
-            window.addEventListener('max-web-app-ready', () => {
-                this.webapp = window.WebApp || this.webapp;
-            });
+        // Initialize Max WebApp
+        this.app = window.Max?.WebApp;
+        
+        // Check if running inside Max Messenger
+        // initData is a string; if it's empty, we're just in a browser
+        if (!this.app || !this.app.initData) {
+            document.body.innerHTML = `
+                <div style="display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;text-align:center;padding:20px;">
+                    <h1 style="margin-bottom:10px;">⛔ Доступ запрещен</h1>
+                    <p>Пожалуйста, откройте это приложение через Max Messenger.</p>
+                </div>
+            `;
+            throw new Error("Running outside Max Messenger");
         }
+        
+        // Store initData for API authentication
+        this.initData = this.app.initData;
+        
+        // Create webapp reference for compatibility
+        this.webapp = this.app;
+        
         this.unknownStageLabel = 'unknown';
 
         // UI Elements
@@ -41,7 +55,8 @@ class CloudManagerApp {
             sendData: (data) => console.log('WebApp sendData:', data),
             themeParams: {},
             openLink: (url) => window.open(url, '_blank'),
-            close: () => window.close()
+            close: () => window.close(),
+            initData: ''
         };
     }
 
@@ -145,7 +160,11 @@ class CloudManagerApp {
         if (!vmCountElement) return;
 
         try {
-            const response = await fetch('/api/vms-count');
+            const response = await fetch('/api/vms-count', {
+                headers: {
+                    'X-Auth-Data': this.initData
+                }
+            });
             const data = await response.json();
 
             if (data.success) {
@@ -396,7 +415,10 @@ class CloudManagerApp {
             // Send request to backend API instead of using sendData
             const response = await fetch('/api/create-cluster', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Auth-Data': this.initData
+                },
                 body: JSON.stringify(data)
             });
 
@@ -525,7 +547,11 @@ class CloudManagerApp {
         
         const poll = async () => {
             try {
-                const res = await fetch(`/api/pipeline-status/${projectId}/${pipelineId}`);
+                const res = await fetch(`/api/pipeline-status/${projectId}/${pipelineId}`, {
+                    headers: {
+                        'X-Auth-Data': this.initData
+                    }
+                });
                 const data = await res.json();
                 
                 if (data.success) {

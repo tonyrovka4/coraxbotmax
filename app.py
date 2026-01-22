@@ -1,10 +1,14 @@
 import os
 import secrets
 import hashlib
+import hmac
 import base64
 import urllib.parse
 import json
 import logging
+import time
+from functools import wraps
+from urllib.parse import parse_qsl
 
 import requests
 from flask import (
@@ -56,6 +60,88 @@ APP_ORIGIN = os.getenv("APP_ORIGIN", "")
 # Cloud.ru API credentials
 CLOUD_CLIENT_ID = os.getenv("CLOUD_CLIENT_ID", "")
 CLOUD_CLIENT_SECRET = os.getenv("CLOUD_CLIENT_SECRET", "")
+
+# Bot token for Max WebApp authentication
+BOT_TOKEN = os.getenv("TOKEN")
+
+
+def validate_max_init_data(init_data: str, bot_token: str) -> bool:
+    """
+    Validate the authenticity of Max WebApp initData using HMAC-SHA256.
+    This implements the Telegram/Max validation algorithm.
+    """
+    if not init_data or not bot_token:
+        return False
+
+    try:
+        # 1. Parse the query string into a dictionary
+        parsed_data = dict(parse_qsl(init_data))
+        
+        # 2. Extract the hash (signature) that Max sent
+        received_hash = parsed_data.pop('hash', None)
+        if not received_hash:
+            return False
+
+        # 3. Sort parameters alphabetically
+        # 4. Build the check string: key=value\nkey=value...
+        data_check_string = "\n".join(
+            f"{k}={v}" for k, v in sorted(parsed_data.items())
+        )
+
+        # 5. Generate the secret key
+        # In Max (like in Telegram) the constant "WebAppData" is used
+        secret_key = hmac.new(
+            key=b"WebAppData", 
+            msg=bot_token.encode(), 
+            digestmod=hashlib.sha256
+        ).digest()
+
+        # 6. Calculate the expected hash
+        calculated_hash = hmac.new(
+            key=secret_key, 
+            msg=data_check_string.encode(), 
+            digestmod=hashlib.sha256
+        ).hexdigest()
+
+        # 7. Compare securely (constant-time comparison to prevent timing attacks)
+        if not hmac.compare_digest(calculated_hash, received_hash):
+            return False
+        
+        # 8. Check auth_date is not too old (24 hours = 86400 seconds)
+        auth_date = int(parsed_data.get('auth_date', 0))
+        if auth_date and (time.time() - auth_date) > 86400:
+            logger.warning("Init data expired")
+            return False
+
+        return True
+
+    except Exception as e:
+        logger.error(f"Validation error: {e}")
+        return False
+
+
+def require_max_auth(f):
+    """
+    Decorator that protects API endpoints by validating Max WebApp initData.
+    Expects initData in the X-Auth-Data header.
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Expect initData in the X-Auth-Data header
+        auth_header = request.headers.get('X-Auth-Data')
+        
+        if not auth_header:
+            return jsonify({"error": "No authentication data provided"}), 401
+        
+        # Validate the signature
+        is_valid = validate_max_init_data(auth_header, BOT_TOKEN)
+        
+        if not is_valid:
+            return jsonify({"error": "Invalid authentication signature"}), 403
+            
+        return f(*args, **kwargs)
+    return decorated_function
+
 
 @app.route("/", methods=["GET"])
 def web():
@@ -281,6 +367,7 @@ def get_all_vms_in_cloud(cloud_project_id):
 
 
 @app.route('/api/vms-count', methods=['GET'])
+@require_max_auth
 def get_vms_count_api():
     """
     API endpoint to get VM count. Used for lazy loading on the client-side.
@@ -303,6 +390,7 @@ def get_vms_count_api():
 
 
 @app.route('/api/create-cluster', methods=['POST'])
+@require_max_auth
 def create_cluster_api():
     """
     API endpoint to create a GitLab project and trigger the pipeline.
@@ -352,6 +440,7 @@ def create_cluster_api():
 
 
 @app.route('/api/pipeline-status/<int:project_id>/<int:pipeline_id>')
+@require_max_auth
 def check_pipeline_status(project_id, pipeline_id):
     """
     API endpoint to check the status of a GitLab pipeline.
