@@ -262,11 +262,11 @@ def get_access_token_from_cloud():
 
     return access_token
 
-def get_all_vms_in_cloud(cloud_project_id_for_token):
+def get_all_vms_in_cloud(cloud_project_id):
     
     token = get_access_token_from_cloud()
     
-    url = f"https://compute.api.cloud.ru/api/v1/vms?project_id=49abf5c8-9f16-4ca3-b5d3-5eca9bfac631"
+    url = f"https://compute.api.cloud.ru/api/v1/vms?project_id={cloud_project_id}"
     headers = {
         "Authorization": f"Bearer {token}"
     }
