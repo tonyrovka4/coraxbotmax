@@ -43,3 +43,4 @@ instance/
 
 # Logs
 *.log
+.max
