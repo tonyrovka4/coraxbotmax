@@ -19,6 +19,9 @@ class CloudManagerApp {
         this.serviceSelectionSection = document.getElementById('serviceSelectionSection');
         this.formSection = document.getElementById('formSection');
 
+        // Setup custom alert modal
+        this.setupCustomAlert();
+
         // Initialize the application
         if (this.menuSection) {
             this.init();
@@ -35,12 +38,77 @@ class CloudManagerApp {
         return {
             expand: () => { },
             ready: () => { },
-            showAlert: (msg) => alert(msg),
             sendData: (data) => console.log('WebApp sendData:', data),
             themeParams: {},
             openLink: (url) => window.open(url, '_blank'),
             close: () => window.close()
         };
+    }
+
+    /**
+     * Setup custom alert modal functionality
+     */
+    setupCustomAlert() {
+        this.alertModal = document.getElementById('customAlertModal');
+        this.alertMessage = document.getElementById('alertMessage');
+        this.alertIcon = document.getElementById('alertIcon');
+        this.alertOkBtn = document.getElementById('alertOkBtn');
+        this.alertOverlay = this.alertModal?.querySelector('.custom-alert-overlay');
+
+        if (this.alertOkBtn) {
+            this.alertOkBtn.addEventListener('click', () => this.hideAlert());
+        }
+        if (this.alertOverlay) {
+            this.alertOverlay.addEventListener('click', () => this.hideAlert());
+        }
+        // Close on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.alertModal && !this.alertModal.classList.contains('hidden')) {
+                this.hideAlert();
+            }
+        });
+    }
+
+    /**
+     * Show custom alert modal
+     * @param {string} message - The message to display
+     * @param {string} type - Alert type: 'error', 'success', or 'info'
+     */
+    showAlert(message, type = 'error') {
+        if (!this.alertModal || !this.alertMessage || !this.alertIcon) {
+            // Fallback to native alert if modal not available
+            alert(message);
+            return;
+        }
+
+        this.alertMessage.textContent = message;
+
+        // Reset icon classes
+        this.alertIcon.className = 'custom-alert-icon';
+
+        // Set icon and style based on type
+        if (type === 'success') {
+            this.alertIcon.textContent = '✓';
+            this.alertIcon.classList.add('alert-icon-success');
+        } else if (type === 'info') {
+            this.alertIcon.textContent = 'ℹ';
+            this.alertIcon.classList.add('alert-icon-info');
+        } else {
+            this.alertIcon.textContent = '!';
+            // Default error style (no additional class needed)
+        }
+
+        this.alertModal.classList.remove('hidden');
+        this.alertOkBtn?.focus();
+    }
+
+    /**
+     * Hide custom alert modal
+     */
+    hideAlert() {
+        if (this.alertModal) {
+            this.alertModal.classList.add('hidden');
+        }
     }
 
     /**
@@ -56,6 +124,8 @@ class CloudManagerApp {
         this.setupForm();
         this.setupInputAnimations();
         this.setupCleanup();
+        // Lazy load VM count after page load
+        this.loadVmCount();
     }
 
     /**
@@ -65,6 +135,29 @@ class CloudManagerApp {
         this.setupWebApp();
         this.setupTheme();
         this.setupAuthButtons();
+    }
+
+    /**
+     * Lazy load VM count from the server
+     */
+    async loadVmCount() {
+        const vmCountElement = document.getElementById('vmCount');
+        if (!vmCountElement) return;
+
+        try {
+            const response = await fetch('/api/vms-count');
+            const data = await response.json();
+
+            if (data.success) {
+                vmCountElement.textContent = data.count;
+            } else {
+                vmCountElement.innerHTML = '<span class="vm-error">Ошибка загрузки</span>';
+                console.error('Error loading VM count:', data.error);
+            }
+        } catch (error) {
+            vmCountElement.innerHTML = '<span class="vm-error">Сеть недоступна</span>';
+            console.error('Network error loading VM count:', error);
+        }
     }
 
     /**
@@ -139,7 +232,7 @@ class CloudManagerApp {
                 } catch (error) {
                     console.error(`${provider} OAuth error:`, error);
                     this.setButtonLoading(btn, false);
-                    this.webapp.showAlert(`Ошибка подключения к ${provider}: ${error.message}`);
+                    this.showAlert(`Ошибка подключения к ${provider}: ${error.message}`);
                 }
             });
         });
@@ -159,13 +252,13 @@ class CloudManagerApp {
             } else {
                 // Fallback or specific logical branches if needed
                 this.setButtonLoading(btn, false);
-                this.webapp.showAlert('Успешная инициализация, но URL для перехода не получен');
+                this.showAlert('Успешная инициализация, но URL для перехода не получен', 'info');
             }
         } else {
             // Revert state and show error
             this.setButtonLoading(btn, false);
             const errorMsg = data.error || 'Ошибка инициализации';
-            this.webapp.showAlert(errorMsg);
+            this.showAlert(errorMsg);
         }
     }
 
@@ -280,12 +373,12 @@ class CloudManagerApp {
         const cloudProjectId = cloudProjectIdInput ? cloudProjectIdInput.value : '';
 
         if (!subnet || !flavor) {
-            this.webapp.showAlert("Пожалуйста, выберите подсеть и конфигурацию");
+            this.showAlert("Пожалуйста, выберите подсеть и конфигурацию");
             return;
         }
 
         if (!title) {
-            this.webapp.showAlert("Введите название виртуальной машины");
+            this.showAlert("Введите название виртуальной машины");
             return;
         }
 
@@ -408,7 +501,7 @@ class CloudManagerApp {
                 statusText.classList.add('status-error');
             }
         } else {
-            this.webapp.showAlert(errorMessage);
+            this.showAlert(errorMessage);
         }
     }
 

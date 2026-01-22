@@ -63,8 +63,7 @@ def web():
     user_info = {
         "name": session.get("user_name"),
         "email": session.get("user_email"),
-        "cloud_project_id": session.get("user_cloud_project_id"),
-        "all_vms": session.get("all_vms")
+        "cloud_project_id": session.get("user_cloud_project_id")
     } if is_authed else None
     return render_template("index.html", is_authed=is_authed, user_info=user_info)
 
@@ -226,16 +225,12 @@ def keycloak_oauth_callback():
         except requests.RequestException:
             pass  # User info is optional
 
-        cloud_project_id_for_token = user_info.get('cloud_project_id')
-        get_all_vms_in_cloud(cloud_project_id_for_token)
-
         session["is_authed"] = True
         session["auth_provider"] = "keycloak"
         if user_info:
             session["user_email"] = user_info.get('email')
             session["user_name"] = user_info.get('preferred_username') or user_info.get('name')
             session["user_cloud_project_id"] = user_info.get('cloud_project_id')
-            session["all_vms"] = get_all_vms_in_cloud(cloud_project_id_for_token)
         # Clean up OAuth session data
         session.pop('keycloak_state', None)
         session.pop('keycloak_code_verifier', None)
@@ -283,6 +278,28 @@ def get_all_vms_in_cloud(cloud_project_id_for_token):
     vms_data = response.json()
     total_vms = vms_data.get("total", 0)
     return total_vms
+
+
+@app.route('/api/vms-count', methods=['GET'])
+def get_vms_count_api():
+    """
+    API endpoint to get VM count. Used for lazy loading on the client-side.
+    """
+    # Check if user is authenticated
+    if not session.get("is_authed"):
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+    
+    cloud_project_id = session.get("user_cloud_project_id")
+    
+    try:
+        count = get_all_vms_in_cloud(cloud_project_id)
+        return jsonify({"success": True, "count": count})
+    except requests.RequestException as e:
+        logger.error(f"Error fetching VM count: {e}")
+        return jsonify({"success": False, "error": "Ошибка получения данных"}), 500
+    except Exception as e:
+        logger.error(f"Unexpected error fetching VM count: {e}")
+        return jsonify({"success": False, "error": "Внутренняя ошибка сервера"}), 500
 
 
 @app.route('/api/create-cluster', methods=['POST'])

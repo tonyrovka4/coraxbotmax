@@ -123,7 +123,9 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Всего ВМ</label>
-                <div class="info-value">{{ user_info.all_vms }}</div>
+                <div class="info-value" id="vmCount">
+                    <span class="spinner vm-spinner"></span>
+                </div>
             </div>
         </div>
         <div class="form-actions">
@@ -201,6 +203,16 @@
         </form>
     </div>
     {% endif %}
+    </div>
+
+    <!-- Custom Alert Modal -->
+    <div id="customAlertModal" class="custom-alert-modal hidden">
+        <div class="custom-alert-overlay"></div>
+        <div class="custom-alert-content">
+            <div class="custom-alert-icon" id="alertIcon">!</div>
+            <div class="custom-alert-message" id="alertMessage"></div>
+            <button class="btn btn-primary custom-alert-btn" id="alertOkBtn">OK</button>
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='app.js') }}"></script>

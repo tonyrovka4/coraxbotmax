@@ -550,3 +550,105 @@ h1 {
 .status-link:hover {
     background: rgba(255, 255, 255, 0.12);
 }
+
+/* Custom Alert Modal */
+.custom-alert-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.custom-alert-modal.hidden {
+    display: none !important;
+}
+
+.custom-alert-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+}
+
+.custom-alert-content {
+    position: relative;
+    background: var(--tg-theme-secondary-bg-color, #1e1e1e);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-lg);
+    max-width: 320px;
+    width: 90%;
+    text-align: center;
+    box-shadow: var(--shadow-md);
+    animation: alertSlideIn 0.3s ease;
+}
+
+@keyframes alertSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.custom-alert-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--spacing-sm);
+    font-size: 24px;
+    font-weight: 700;
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 2px solid rgba(239, 68, 68, 0.3);
+}
+
+.custom-alert-icon.alert-icon-success {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.custom-alert-icon.alert-icon-info {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.custom-alert-message {
+    font-size: 16px;
+    color: var(--tg-theme-text-color);
+    margin-bottom: var(--spacing-md);
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+.custom-alert-btn {
+    min-width: 120px;
+}
+
+/* VM Count Loading Spinner */
+.vm-spinner {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+    margin: 0;
+}
+
+.vm-error {
+    color: #ef4444;
+    font-size: 14px;
+}
