@@ -170,11 +170,15 @@ class CloudManagerApp {
             if (data.success) {
                 vmCountElement.textContent = data.count;
             } else {
-                vmCountElement.innerHTML = '<span class="vm-error">Ошибка загрузки</span>';
+                // Use textContent instead of innerHTML to prevent XSS
+                vmCountElement.textContent = 'Ошибка загрузки';
+                vmCountElement.classList.add('vm-error');
                 console.error('Error loading VM count:', data.error);
             }
         } catch (error) {
-            vmCountElement.innerHTML = '<span class="vm-error">Сеть недоступна</span>';
+            // Use textContent instead of innerHTML to prevent XSS
+            vmCountElement.textContent = 'Сеть недоступна';
+            vmCountElement.classList.add('vm-error');
             console.error('Network error loading VM count:', error);
         }
     }
@@ -449,27 +453,64 @@ class CloudManagerApp {
 
     /**
      * Show the status section with initial message
+     * Uses safe DOM manipulation to prevent XSS
      */
     showStatusSection(message) {
         let statusSection = document.getElementById('statusSection');
         
         if (!statusSection) {
-            // Create status section if it doesn't exist
+            // Create status section structure safely using DOM APIs
             statusSection = document.createElement('div');
             statusSection.id = 'statusSection';
             statusSection.className = 'status-section';
-            statusSection.innerHTML = `
-                <div class="status-content">
-                    <div class="status-spinner"><span class="spinner"></span></div>
-                    <div id="statusText" class="status-text">${message}</div>
-                    <div id="stageStatus" class="stage-status hidden"></div>
-                    <div class="progress-container">
-                        <div class="progress-bar" id="progressBar"></div>
-                    </div>
-                    <div id="stageProgress" class="stage-progress hidden"></div>
-                    <div id="statusLinks" class="status-links"></div>
-                </div>
-            `;
+            
+            const statusContent = document.createElement('div');
+            statusContent.className = 'status-content';
+            
+            // Spinner
+            const spinnerDiv = document.createElement('div');
+            spinnerDiv.className = 'status-spinner';
+            const spinnerSpan = document.createElement('span');
+            spinnerSpan.className = 'spinner';
+            spinnerDiv.appendChild(spinnerSpan);
+            
+            // Status text
+            const statusText = document.createElement('div');
+            statusText.id = 'statusText';
+            statusText.className = 'status-text';
+            statusText.textContent = message;
+            
+            // Stage status
+            const stageStatus = document.createElement('div');
+            stageStatus.id = 'stageStatus';
+            stageStatus.className = 'stage-status hidden';
+            
+            // Progress container
+            const progressContainer = document.createElement('div');
+            progressContainer.className = 'progress-container';
+            const progressBar = document.createElement('div');
+            progressBar.className = 'progress-bar';
+            progressBar.id = 'progressBar';
+            progressContainer.appendChild(progressBar);
+            
+            // Stage progress
+            const stageProgress = document.createElement('div');
+            stageProgress.id = 'stageProgress';
+            stageProgress.className = 'stage-progress hidden';
+            
+            // Status links
+            const statusLinks = document.createElement('div');
+            statusLinks.id = 'statusLinks';
+            statusLinks.className = 'status-links';
+            
+            // Assemble the structure
+            statusContent.appendChild(spinnerDiv);
+            statusContent.appendChild(statusText);
+            statusContent.appendChild(stageStatus);
+            statusContent.appendChild(progressContainer);
+            statusContent.appendChild(stageProgress);
+            statusContent.appendChild(statusLinks);
+            statusSection.appendChild(statusContent);
         
             const formSection = document.getElementById('formSection');
             if (formSection) {
@@ -477,7 +518,7 @@ class CloudManagerApp {
             }
         } else {
             statusSection.classList.remove('hidden');
-            document.getElementById('statusText').innerText = message;
+            document.getElementById('statusText').textContent = message;
             const stageStatus = document.getElementById('stageStatus');
             if (stageStatus) stageStatus.classList.add('hidden');
             const stageProgress = document.getElementById('stageProgress');
@@ -487,24 +528,36 @@ class CloudManagerApp {
 
     /**
      * Update status section with pipeline info and links
+     * Uses safe DOM manipulation instead of innerHTML to prevent XSS
      */
     updateStatusSection(message, pipelineUrl, projectUrl) {
         const statusText = document.getElementById('statusText');
         const statusLinks = document.getElementById('statusLinks');
         
         if (statusText) {
-            statusText.innerText = message;
+            statusText.textContent = message;
         }
         
         if (statusLinks) {
-            statusLinks.innerHTML = `
-                <a href="${pipelineUrl}" target="_blank" class="status-link">
-                    Открыть Pipeline
-                </a>
-                <a href="${projectUrl}" target="_blank" class="status-link">
-                    Открыть проект
-                </a>
-            `;
+            // Clear existing content safely
+            statusLinks.replaceChildren();
+            
+            // Create pipeline link safely using DOM APIs
+            const pipelineLink = document.createElement('a');
+            pipelineLink.href = pipelineUrl;
+            pipelineLink.target = '_blank';
+            pipelineLink.className = 'status-link';
+            pipelineLink.textContent = 'Открыть Pipeline';
+            
+            // Create project link safely using DOM APIs
+            const projectLink = document.createElement('a');
+            projectLink.href = projectUrl;
+            projectLink.target = '_blank';
+            projectLink.className = 'status-link';
+            projectLink.textContent = 'Открыть проект';
+            
+            statusLinks.appendChild(pipelineLink);
+            statusLinks.appendChild(projectLink);
         }
     }
 

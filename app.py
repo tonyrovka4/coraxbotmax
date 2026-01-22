@@ -1,4 +1,5 @@
 import os
+import re
 import secrets
 import hashlib
 import hmac
@@ -7,6 +8,7 @@ import urllib.parse
 import json
 import logging
 import time
+import socket
 from functools import wraps
 from urllib.parse import parse_qsl
 
@@ -39,8 +41,10 @@ if not app.secret_key:
 # Session cookie configuration for OAuth flows with external identity providers
 # SameSite=None is required for cross-origin redirects from OAuth providers (e.g., Keycloak)
 # Secure=True is required when SameSite=None (enforced by browsers)
+# HttpOnly=True prevents JavaScript access to session cookies (XSS protection)
 app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
 
 USERNAME = os.getenv("APP_USERNAME", "")
 PASSWORD = os.getenv("APP_PASSWORD", "")
@@ -193,9 +197,15 @@ def keycloak_oauth_init():
     if not APP_ORIGIN:
         return jsonify({"success": False, "error": "APP_ORIGIN not configured"}), 500
 
-    response = os.system("ping -c 1 -w2 10.10.11.16 > /dev/null 2>&1")
-
-    if response:
+    # Safe network connectivity check using socket instead of os.system (prevents Command Injection)
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2)
+        result = sock.connect_ex(('10.10.11.16', 443))
+        sock.close()
+        if result != 0:
+            return jsonify({"success": False, "error": "Network issues with Keycloak"}), 500
+    except socket.error:
         return jsonify({"success": False, "error": "Network issues with Keycloak"}), 500
 
     # Generate PKCE code verifier and challenge for additional security
@@ -349,15 +359,26 @@ def get_access_token_from_cloud():
     return access_token
 
 def get_all_vms_in_cloud(cloud_project_id):
+    # Validate cloud_project_id to prevent injection attacks
+    if not cloud_project_id:
+        raise ValueError("cloud_project_id is required")
+    
+    # Only allow alphanumeric characters, hyphens, and underscores (typical for UUIDs/project IDs)
+    if not re.match(r'^[a-zA-Z0-9_-]+$', cloud_project_id):
+        raise ValueError("Invalid cloud_project_id format")
     
     token = get_access_token_from_cloud()
     
-    url = f"https://compute.api.cloud.ru/api/v1/vms?project_id={cloud_project_id}"
+    # Use params argument for proper URL encoding to prevent injection
+    url = "https://compute.api.cloud.ru/api/v1/vms"
     headers = {
         "Authorization": f"Bearer {token}"
     }
+    params = {
+        "project_id": cloud_project_id
+    }
 
-    response = requests.get(url, headers=headers, allow_redirects=True)
+    response = requests.get(url, headers=headers, params=params, allow_redirects=True)
     response.raise_for_status()  # вызовет исключение при HTTP ошибке
 
     # Получаем данные
@@ -371,11 +392,9 @@ def get_all_vms_in_cloud(cloud_project_id):
 def get_vms_count_api():
     """
     API endpoint to get VM count. Used for lazy loading on the client-side.
+    Protected by @require_max_auth decorator which validates Max WebApp initData.
+    Session check removed to avoid conflicts between session and initData auth.
     """
-    # Check if user is authenticated
-    if not session.get("is_authed"):
-        return jsonify({"success": False, "error": "Unauthorized"}), 401
-    
     cloud_project_id = session.get("user_cloud_project_id")
     
     try:
@@ -395,11 +414,8 @@ def create_cluster_api():
     """
     API endpoint to create a GitLab project and trigger the pipeline.
     This replaces the previous flow through the bot (sendData).
+    Protected by @require_max_auth decorator which validates Max WebApp initData.
     """
-    # Check if user is authenticated
-    if not session.get("is_authed"):
-        return jsonify({"success": False, "error": "Unauthorized"}), 401
-    
     data = request.json
     if not data:
         return jsonify({"success": False, "error": "No data provided"}), 400
@@ -445,11 +461,8 @@ def check_pipeline_status(project_id, pipeline_id):
     """
     API endpoint to check the status of a GitLab pipeline.
     Frontend polls this endpoint to show real-time progress.
+    Protected by @require_max_auth decorator which validates Max WebApp initData.
     """
-    # Check if user is authenticated
-    if not session.get("is_authed"):
-        return jsonify({"success": False, "error": "Unauthorized"}), 401
-    
     try:
         status_info = get_pipeline_status(project_id, pipeline_id)
         return jsonify({
