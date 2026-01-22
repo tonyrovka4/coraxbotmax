@@ -572,7 +572,7 @@ class CloudManagerApp {
             
             const statusText = document.getElementById('statusText');
             if (statusText) {
-                statusText.innerText = `❌ ${errorMessage}`;
+                statusText.textContent = `❌ ${errorMessage}`;
                 statusText.classList.add('status-error');
             }
         } else {
@@ -626,15 +626,15 @@ class CloudManagerApp {
                             'skipped': '⏭️ Пайплайн пропущен',
                             'manual': '⏸️ Ожидание ручного запуска'
                         };
-                        statusText.innerText = statusMessages[data.status] || `Статус: ${data.status}`;
+                        statusText.textContent = statusMessages[data.status] || `Статус: ${data.status}`;
                     }
 
                     if (stageStatus) {
                         if (data.running_stage) {
-                            stageStatus.innerText = `Сейчас выполняется: ${data.running_stage}`;
+                            stageStatus.textContent = `Сейчас выполняется: ${data.running_stage}`;
                             stageStatus.classList.remove('hidden');
                         } else if (typeof data.total_stages === 'number' && data.total_stages > 0) {
-                            stageStatus.innerText = `Готово этапов: ${data.completed_stages ?? 0} из ${data.total_stages}`;
+                            stageStatus.textContent = `Готово этапов: ${data.completed_stages ?? 0} из ${data.total_stages}`;
                             stageStatus.classList.remove('hidden');
                         } else {
                             stageStatus.classList.add('hidden');
@@ -706,7 +706,7 @@ class CloudManagerApp {
                         if (stageStatus && Array.isArray(data.stages)) {
                             const lastStage = data.stages.slice().reverse().find(stage => ['completed', 'failed', 'canceled'].includes(stage.status));
                             if (lastStage) {
-                                stageStatus.innerText = `Готово! Последний этап: ${lastStage.name || this.unknownStageLabel}`;
+                                stageStatus.textContent = `Готово! Последний этап: ${lastStage.name || this.unknownStageLabel}`;
                                 stageStatus.classList.remove('hidden');
                             }
                         }
@@ -727,7 +727,7 @@ class CloudManagerApp {
                 if (errorCount >= maxErrors) {
                     this.stopStatusPolling();
                     if (statusText) {
-                        statusText.innerText = '⚠️ Не удалось получить статус пайплайна';
+                        statusText.textContent = '⚠️ Не удалось получить статус пайплайна';
                     }
                     return;
                 }
