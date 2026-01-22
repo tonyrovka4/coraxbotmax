@@ -6,6 +6,11 @@ class CloudManagerApp {
     constructor() {
         // Initialize Max WebApp or fallback
         this.webapp = window.WebApp || this.createMockWebApp();
+        if (!window.WebApp) {
+            window.addEventListener('max-web-app-ready', () => {
+                this.webapp = window.WebApp || this.webapp;
+            });
+        }
         this.unknownStageLabel = 'unknown';
 
         // UI Elements

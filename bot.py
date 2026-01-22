@@ -28,9 +28,9 @@ dp = Dispatcher()
 async def start(message: types.MessageCreated):
     builder = InlineKeyboardBuilder()
     builder.add(
-        types.OpenAppButton(
+        types.LinkButton(
             text="PaaS Cloud manager",
-            web_app="https://176.123.163.57.sslip.io",
+            url="https://176.123.163.57.sslip.io",
         )
     )
     await message.message.answer(
