@@ -5,7 +5,7 @@
 class CloudManagerApp {
     constructor() {
         // Initialize Max WebApp
-        this.app = window.Max?.WebApp;
+        this.app = window.WebApp;
         
         // Check if running inside Max Messenger
         // initData is a string; if it's empty, we're just in a browser
