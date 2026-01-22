@@ -477,10 +477,10 @@ class CloudManagerApp {
         if (statusLinks) {
             statusLinks.innerHTML = `
                 <a href="${pipelineUrl}" target="_blank" class="status-link">
-                    🚀 Открыть Pipeline
+                    Открыть Pipeline
                 </a>
                 <a href="${projectUrl}" target="_blank" class="status-link">
-                    📁 Открыть проект
+                    Открыть проект
                 </a>
             `;
         }
@@ -552,7 +552,7 @@ class CloudManagerApp {
 
                     if (stageStatus) {
                         if (data.running_stage) {
-                            stageStatus.innerText = `⚡ Сейчас выполняется: ${data.running_stage}`;
+                            stageStatus.innerText = `Сейчас выполняется: ${data.running_stage}`;
                             stageStatus.classList.remove('hidden');
                         } else if (typeof data.total_stages === 'number' && data.total_stages > 0) {
                             stageStatus.innerText = `Готово этапов: ${data.completed_stages ?? 0} из ${data.total_stages}`;
