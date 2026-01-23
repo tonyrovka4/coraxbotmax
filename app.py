@@ -68,6 +68,10 @@ CLOUD_CLIENT_SECRET = os.getenv("CLOUD_CLIENT_SECRET", "")
 # Bot token for Max WebApp authentication
 BOT_TOKEN = os.getenv("TOKEN")
 
+# Threshold for detecting millisecond timestamps (approx. year 2096 in seconds)
+# Any auth_date value above this is assumed to be in milliseconds
+TIMESTAMP_MILLISECONDS_THRESHOLD = 4000000000
+
 
 def validate_max_init_data(init_data: str, bot_token: str) -> bool:
     """
@@ -84,10 +88,13 @@ def validate_max_init_data(init_data: str, bot_token: str) -> bool:
 
     try:
         # 1. Detect if initData is URL-encoded and decode it
-        # If the string contains '%' but doesn't have '=' without encoding,
-        # it's likely fully URL-encoded
-        if '%' in init_data and '%3D' in init_data:
-            init_data = urllib.parse.unquote(init_data)
+        # Try to decode if it appears URL-encoded (contains % character)
+        # The decoded version should be different and parse correctly
+        if '%' in init_data:
+            decoded = urllib.parse.unquote(init_data)
+            # Only use decoded version if it actually changed something
+            if decoded != init_data:
+                init_data = decoded
         
         # 2. Parse the query string into a dictionary
         # IMPORTANT: keep_blank_values=True preserves empty parameters needed for validation
@@ -127,9 +134,8 @@ def validate_max_init_data(init_data: str, bot_token: str) -> bool:
         auth_date = int(parsed_data.get('auth_date', 0))
         if auth_date:
             # Handle both seconds and milliseconds timestamps
-            # If auth_date is larger than a reasonable timestamp in seconds,
-            # it's likely in milliseconds (e.g., > year 2100 in seconds = ~4102444800)
-            if auth_date > 4000000000:  # Likely milliseconds
+            # Convert milliseconds to seconds if needed
+            if auth_date > TIMESTAMP_MILLISECONDS_THRESHOLD:
                 auth_date = auth_date / 1000
             
             if (time.time() - auth_date) > 86400:
