@@ -73,26 +73,38 @@ def validate_max_init_data(init_data: str, bot_token: str) -> bool:
     """
     Validate the authenticity of Max WebApp initData using HMAC-SHA256.
     This implements the Telegram/Max validation algorithm.
+    
+    Handles:
+    - URL-encoded initData (detects and decodes before parsing)
+    - Empty/blank parameter values (preserves them for signature validation)
+    - Auth dates in both seconds and milliseconds format
     """
     if not init_data or not bot_token:
         return False
 
     try:
-        # 1. Parse the query string into a dictionary
-        parsed_data = dict(parse_qsl(init_data))
+        # 1. Detect if initData is URL-encoded and decode it
+        # If the string contains '%' but doesn't have '=' without encoding,
+        # it's likely fully URL-encoded
+        if '%' in init_data and '%3D' in init_data:
+            init_data = urllib.parse.unquote(init_data)
         
-        # 2. Extract the hash (signature) that Max sent
+        # 2. Parse the query string into a dictionary
+        # IMPORTANT: keep_blank_values=True preserves empty parameters needed for validation
+        parsed_data = dict(parse_qsl(init_data, keep_blank_values=True))
+        
+        # 3. Extract the hash (signature) that Max sent
         received_hash = parsed_data.pop('hash', None)
         if not received_hash:
             return False
 
-        # 3. Sort parameters alphabetically
-        # 4. Build the check string: key=value\nkey=value...
+        # 4. Sort parameters alphabetically
+        # 5. Build the check string: key=value\nkey=value...
         data_check_string = "\n".join(
             f"{k}={v}" for k, v in sorted(parsed_data.items())
         )
 
-        # 5. Generate the secret key
+        # 6. Generate the secret key
         # In Max (like in Telegram) the constant "WebAppData" is used
         secret_key = hmac.new(
             key=b"WebAppData", 
@@ -100,22 +112,29 @@ def validate_max_init_data(init_data: str, bot_token: str) -> bool:
             digestmod=hashlib.sha256
         ).digest()
 
-        # 6. Calculate the expected hash
+        # 7. Calculate the expected hash
         calculated_hash = hmac.new(
             key=secret_key, 
             msg=data_check_string.encode(), 
             digestmod=hashlib.sha256
         ).hexdigest()
 
-        # 7. Compare securely (constant-time comparison to prevent timing attacks)
+        # 8. Compare securely (constant-time comparison to prevent timing attacks)
         if not hmac.compare_digest(calculated_hash, received_hash):
             return False
         
-        # 8. Check auth_date is not too old (24 hours = 86400 seconds)
+        # 9. Check auth_date is not too old (24 hours = 86400 seconds)
         auth_date = int(parsed_data.get('auth_date', 0))
-        if auth_date and (time.time() - auth_date) > 86400:
-            logger.warning("Init data expired")
-            return False
+        if auth_date:
+            # Handle both seconds and milliseconds timestamps
+            # If auth_date is larger than a reasonable timestamp in seconds,
+            # it's likely in milliseconds (e.g., > year 2100 in seconds = ~4102444800)
+            if auth_date > 4000000000:  # Likely milliseconds
+                auth_date = auth_date / 1000
+            
+            if (time.time() - auth_date) > 86400:
+                logger.warning("Init data expired")
+                return False
 
         return True
 
