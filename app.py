@@ -173,6 +173,7 @@ def require_max_auth(f):
 
 
 @app.route("/", methods=["GET"])
+#@require_max_auth
 def web():
     is_authed = session.get("is_authed", False)
     user_info = {
@@ -184,6 +185,7 @@ def web():
 
 
 @app.route("/login", methods=["POST"])
+#@require_max_auth
 def login():
     login_val = request.form.get("login", "")
     password_val = request.form.get("password", "")
@@ -196,6 +198,7 @@ def login():
 
 
 @app.route("/logout", methods=["POST"])
+#@require_max_auth
 def logout():
     session.clear()
     flash("Вы вышли из системы", "info")
@@ -450,3 +453,61 @@ def create_cluster_api():
     for field in required_fields:
         if not data.get(field):
             return jsonify({"success": False, "error": f"Missing required field: {field}"}), 400
+    
+    try:
+        # Execute GitLab project setup (previously in bot.py)
+        result = setup_gitlab_project(
+            cloud_project_id=data.get('cloud_project_id', ''),
+            project_name=data['title'],
+            description=data.get('desc', ''),
+            subnet=data['subnet'],
+            flavor=data['flavor']
+        )
+        
+        logger.info(f"Created cluster project: {result['project_url']}")
+        
+        # Return JSON with URLs, keeping the window open
+        return jsonify({
+            "success": True,
+            "pipeline_url": result['pipeline_url'],
+            "pipeline_id": result['pipeline_id'],
+            "project_url": result['project_url'],
+            "project_id": result['project_id']
+        })
+        
+    except ValueError as e:
+        logger.error(f"Configuration error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error creating cluster: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/pipeline-status/<int:project_id>/<int:pipeline_id>')
+@require_max_auth
+def check_pipeline_status(project_id, pipeline_id):
+    """
+    API endpoint to check the status of a GitLab pipeline.
+    Frontend polls this endpoint to show real-time progress.
+    Protected by @require_max_auth decorator which validates Max WebApp initData.
+    """
+    try:
+        status_info = get_pipeline_status(project_id, pipeline_id)
+        return jsonify({
+            "success": True,
+            "status": status_info['status'],
+            "percent": status_info['percent'],
+            "web_url": status_info['web_url'],
+            "running_stage": status_info.get('running_stage'),
+            "completed_stages": status_info.get('completed_stages', 0),
+            "total_stages": status_info.get('total_stages', 0),
+            "stages": status_info.get('stages', [])
+        })
+    except Exception as e:
+        logger.error(f"Error checking pipeline status: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+if __name__ == "__main__":
+    debug_mode = os.getenv("FLASK_DEBUG", "").lower() in {"1", "true", "yes"}
+    app.run(debug=debug_mode, host="0.0.0.0", port=5000)
