@@ -314,15 +314,6 @@ h1 {
     box-shadow: 0 10px 25px -5px rgba(0, 91, 234, 0.4);
 }
 
-.btn-micro {
-    width: 55px;
-    /* Square key */
-    padding: 0;
-    min-width: 55px;
-    margin-top: 0;
-    /* Remove top margin if present in base class for alignment */
-}
-
 /* --- CHOICE GRID --- */
 .choice-grid {
     display: grid;

@@ -6,7 +6,7 @@ class CloudManagerApp {
     constructor() {
         // Initialize Max WebApp
         this.app = window.WebApp;
-        
+
         // Check if running inside Max Messenger
         // initData is a string; if it's empty, we're just in a browser
         if (!this.app || !this.app.initData) {
@@ -18,13 +18,13 @@ class CloudManagerApp {
             `;
             throw new Error("Running outside Max Messenger");
         }
-        
+
         // Store initData for API authentication
         this.initData = this.app.initData;
-        
+
         // Create webapp reference for compatibility
         this.webapp = this.app;
-        
+
         this.unknownStageLabel = 'unknown';
 
         // UI Elements
@@ -138,8 +138,12 @@ class CloudManagerApp {
         this.setupNavigation();
         this.setupForm();
         this.setupInputAnimations();
+        this.setupInputAnimations();
         this.setupCleanup();
-        // Lazy load VM count after page load
+        // Setup manual update handler
+        this.setupVmManualUpdate();
+
+        // Initial load (optional, as we load on section open)
         this.loadVmCount();
     }
 
@@ -180,6 +184,52 @@ class CloudManagerApp {
             vmCountElement.textContent = 'Сеть недоступна';
             vmCountElement.classList.add('vm-error');
             console.error('Network error loading VM count:', error);
+        }
+    }
+
+    /**
+     * Setup manual VM count update button
+     */
+    setupVmManualUpdate() {
+        const refreshBtn = document.getElementById('refreshVmCountBtn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', async () => {
+                const icon = refreshBtn.querySelector('.btn-icon');
+
+                // Add spinning animation class to icon
+                if (icon) icon.style.animation = 'spin 0.8s linear infinite';
+                refreshBtn.disabled = true;
+
+                await this.loadVmCount();
+
+                // Stop animation and re-enable
+                refreshBtn.disabled = false;
+                if (icon) icon.style.animation = '';
+            });
+        }
+    }
+
+    /**
+     * Start polling for VM count (every 15 seconds)
+     */
+    startVmCountPolling() {
+        this.stopVmCountPolling(); // Clear existing to be safe
+
+        this.loadVmCount(); // Immediate load
+
+        // 15 seconds interval
+        this.vmPollingInterval = setInterval(() => {
+            this.loadVmCount();
+        }, 15000);
+    }
+
+    /**
+     * Stop polling for VM count
+     */
+    stopVmCountPolling() {
+        if (this.vmPollingInterval) {
+            clearInterval(this.vmPollingInterval);
+            this.vmPollingInterval = null;
         }
     }
 
@@ -296,11 +346,13 @@ class CloudManagerApp {
         // Resources Button
         document.querySelector('[data-action="resources"]')?.addEventListener('click', () => {
             this.switchPage(this.resourcesSection);
+            this.startVmCountPolling();
         });
 
         // Create Resource Button
         document.querySelector('[data-action="create"]')?.addEventListener('click', () => {
             this.switchPage(this.serviceSelectionSection);
+            this.stopVmCountPolling();
         });
 
         // 2. Service Selection Handlers (Pangolin/Corax)
@@ -314,6 +366,7 @@ class CloudManagerApp {
                 }
 
                 this.switchPage(this.formSection);
+                this.stopVmCountPolling();
             });
         });
 
@@ -322,6 +375,7 @@ class CloudManagerApp {
         document.querySelectorAll('.back-to-menu-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 this.switchPage(this.menuSection);
+                this.stopVmCountPolling();
             });
         });
 
@@ -457,34 +511,34 @@ class CloudManagerApp {
      */
     showStatusSection(message) {
         let statusSection = document.getElementById('statusSection');
-        
+
         if (!statusSection) {
             // Create status section structure safely using DOM APIs
             statusSection = document.createElement('div');
             statusSection.id = 'statusSection';
             statusSection.className = 'status-section';
-            
+
             const statusContent = document.createElement('div');
             statusContent.className = 'status-content';
-            
+
             // Spinner
             const spinnerDiv = document.createElement('div');
             spinnerDiv.className = 'status-spinner';
             const spinnerSpan = document.createElement('span');
             spinnerSpan.className = 'spinner';
             spinnerDiv.appendChild(spinnerSpan);
-            
+
             // Status text
             const statusText = document.createElement('div');
             statusText.id = 'statusText';
             statusText.className = 'status-text';
             statusText.textContent = message;
-            
+
             // Stage status
             const stageStatus = document.createElement('div');
             stageStatus.id = 'stageStatus';
             stageStatus.className = 'stage-status hidden';
-            
+
             // Progress container
             const progressContainer = document.createElement('div');
             progressContainer.className = 'progress-container';
@@ -492,17 +546,17 @@ class CloudManagerApp {
             progressBar.className = 'progress-bar';
             progressBar.id = 'progressBar';
             progressContainer.appendChild(progressBar);
-            
+
             // Stage progress
             const stageProgress = document.createElement('div');
             stageProgress.id = 'stageProgress';
             stageProgress.className = 'stage-progress hidden';
-            
+
             // Status links
             const statusLinks = document.createElement('div');
             statusLinks.id = 'statusLinks';
             statusLinks.className = 'status-links';
-            
+
             // Assemble the structure
             statusContent.appendChild(spinnerDiv);
             statusContent.appendChild(statusText);
@@ -511,7 +565,7 @@ class CloudManagerApp {
             statusContent.appendChild(stageProgress);
             statusContent.appendChild(statusLinks);
             statusSection.appendChild(statusContent);
-        
+
             const formSection = document.getElementById('formSection');
             if (formSection) {
                 formSection.appendChild(statusSection);
@@ -533,29 +587,29 @@ class CloudManagerApp {
     updateStatusSection(message, pipelineUrl, projectUrl) {
         const statusText = document.getElementById('statusText');
         const statusLinks = document.getElementById('statusLinks');
-        
+
         if (statusText) {
             statusText.textContent = message;
         }
-        
+
         if (statusLinks) {
             // Clear existing content safely
             statusLinks.replaceChildren();
-            
+
             // Create pipeline link safely using DOM APIs
             const pipelineLink = document.createElement('a');
             pipelineLink.href = pipelineUrl;
             pipelineLink.target = '_blank';
             pipelineLink.className = 'status-link';
             pipelineLink.textContent = 'Открыть Pipeline';
-            
+
             // Create project link safely using DOM APIs
             const projectLink = document.createElement('a');
             projectLink.href = projectUrl;
             projectLink.target = '_blank';
             projectLink.className = 'status-link';
             projectLink.textContent = 'Открыть проект';
-            
+
             statusLinks.appendChild(pipelineLink);
             statusLinks.appendChild(projectLink);
         }
@@ -569,7 +623,7 @@ class CloudManagerApp {
         if (statusSection) {
             const spinner = statusSection.querySelector('.status-spinner');
             if (spinner) spinner.classList.add('hidden');
-            
+
             const statusText = document.getElementById('statusText');
             if (statusText) {
                 statusText.textContent = `❌ ${errorMessage}`;
@@ -588,16 +642,16 @@ class CloudManagerApp {
         const statusText = document.getElementById('statusText');
         const stageStatus = document.getElementById('stageStatus');
         const stageProgress = document.getElementById('stageProgress');
-        
+
         // Clear any existing polling interval
         if (this.statusPollingInterval) {
             clearInterval(this.statusPollingInterval);
         }
-        
+
         let errorCount = 0;
         const maxErrors = 3;
         let pollInterval = 5000; // Start with 5 seconds
-        
+
         const poll = async () => {
             try {
                 const res = await fetch(`/api/pipeline-status/${projectId}/${pipelineId}`, {
@@ -606,15 +660,15 @@ class CloudManagerApp {
                     }
                 });
                 const data = await res.json();
-                
+
                 if (data.success) {
                     errorCount = 0; // Reset error count on success
-                    
+
                     // Update progress bar
                     if (progressBar) {
                         progressBar.style.width = `${data.percent}%`;
                     }
-                    
+
                     // Update status text
                     if (statusText) {
                         const statusMessages = {
@@ -686,15 +740,15 @@ class CloudManagerApp {
                             stageProgress.classList.add('hidden');
                         }
                     }
-                    
+
                     // Stop polling when pipeline is complete
                     if (['success', 'failed', 'canceled', 'skipped'].includes(data.status)) {
                         this.stopStatusPolling();
-                        
+
                         // Hide spinner when complete
                         const spinner = document.querySelector('.status-spinner');
                         if (spinner) spinner.classList.add('hidden');
-                        
+
                         // Update progress bar color on completion
                         if (progressBar) {
                             if (data.status === 'success') {
@@ -712,7 +766,7 @@ class CloudManagerApp {
                         }
                         return;
                     }
-                    
+
                     // Increase poll interval for long-running pipelines (max 30 seconds)
                     if (pollInterval < 30000) {
                         pollInterval = Math.min(pollInterval * 1.2, 30000);
@@ -723,7 +777,7 @@ class CloudManagerApp {
             } catch (error) {
                 console.error('Error polling pipeline status:', error);
                 errorCount++;
-                
+
                 if (errorCount >= maxErrors) {
                     this.stopStatusPolling();
                     if (statusText) {
@@ -732,15 +786,15 @@ class CloudManagerApp {
                     return;
                 }
             }
-            
+
             // Schedule next poll
             this.statusPollingTimeout = setTimeout(poll, pollInterval);
         };
-        
+
         // Start polling
         poll();
     }
-    
+
     /**
      * Stop polling for pipeline status
      */
@@ -754,13 +808,14 @@ class CloudManagerApp {
             this.statusPollingTimeout = null;
         }
     }
-    
+
     /**
      * Setup cleanup handlers for page unload
      */
     setupCleanup() {
         window.addEventListener('beforeunload', () => {
             this.stopStatusPolling();
+            this.stopVmCountPolling();
         });
     }
 

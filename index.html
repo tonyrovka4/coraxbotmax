@@ -124,8 +124,21 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Всего ВМ</label>
-                    <div class="info-value" id="vmCount">
-                        <span class="spinner vm-spinner"></span>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <div class="info-value" id="vmCount" style="flex-grow: 1;">
+                            <span class="spinner vm-spinner"></span>
+                        </div>
+                        <button class="btn btn-secondary btn-micro" id="refreshVmCountBtn" type="button">
+                            <span class="btn-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M23 4v6h-6"></path>
+                                    <path d="M1 20v-6h6"></path>
+                                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15">
+                                    </path>
+                                </svg>
+                            </span>
+                        </button>
                     </div>
                 </div>
             </div>
