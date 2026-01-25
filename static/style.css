@@ -197,7 +197,7 @@ h1 {
     background: rgba(0, 0, 0, 0.35);
     border-color: var(--accent-color);
     box-shadow: 0 0 0 4px rgba(74, 108, 247, 0.15);
-    transform: translateY(-1px);
+    transform: none;
 }
 
 /* Custom Select Arrow */
