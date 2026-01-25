@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cloud Manager</title>
+    <!-- Шрифты: Manrope для заголовков, JetBrains Mono для данных -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Подключаем Manrope и JetBrains Mono для "инженерного" стиля -->
     <link
         href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;700;800&display=swap"
         rel="stylesheet">
@@ -16,111 +16,111 @@
 </head>
 
 <body>
-    <!-- Фоновый шум для текстуры -->
     <div class="noise-overlay"></div>
 
     <div class="container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        {% for category, msg in messages %}
-        <div class="alert {{ category }}">
-            <span class="alert-icon">
-                {% if category == 'success' %}✓
-                {% elif category == 'error' %}!
-                {% else %}ℹ{% endif %}
-            </span>
-            {{ msg }}
+        <!-- БЛОК СИСТЕМНЫХ СООБЩЕНИЙ -->
+        <!-- Вынесен в отдельный контейнер для идеального отступа -->
+        <div class="alert-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, msg in messages %}
+            <div class="alert {{ category }}">
+                <!-- Иконка зависит от типа -->
+                <span class="alert-icon">
+                    {% if category == 'success' %}●
+                    {% elif category == 'error' %}✖
+                    {% else %}ℹ{% endif %}
+                </span>
+                <span class="alert-text">{{ msg }}</span>
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
         </div>
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
 
         {% if not is_authed %}
+        <!-- ЛОГОТИП И ЗАГОЛОВОК -->
         <div class="app-header">
             <div class="app-logo">
-                <img src="{{ url_for('static', filename='bot.png') }}" alt="App Logo">
+                <img src="{{ url_for('static', filename='bot.png') }}" alt="System Logo">
             </div>
             <h1>Cloud Manager</h1>
             <div class="app-subtitle">Terminal Access v2.0</div>
         </div>
 
-        <!-- ЕДИНЫЙ БЛОК АВТОРИЗАЦИИ -->
+        <!-- КАРТОЧКА АВТОРИЗАЦИИ -->
         <div class="card auth-card page-transition active">
 
-            <!-- Keycloak Login -->
+            <!-- Keycloak (Dominant Action) -->
             <button class="btn btn-keycloak js-auth-btn" type="button" data-provider="Keycloak"
                 data-url="{{ url_for('keycloak_oauth_init') }}">
                 <span class="btn-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path
-                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
+                    <!-- Иконка замка/ключа -->
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" />
                     </svg>
                 </span>
-                SSO Authorization
+                Войти через SSO
             </button>
 
             <div class="auth-divider">
-                <span>или классический вход</span>
+                <span>System Login</span>
             </div>
 
-            <!-- Traditional Login Form -->
+            <!-- Форма входа -->
             <form action="{{ url_for('login') }}" method="POST" class="auth-form">
                 <div class="form-group">
-                    <label class="form-label" for="login">ID Пользователя</label>
+                    <label class="form-label" for="login">User ID</label>
                     <div class="input-wrapper">
-                        <input id="login" name="login" type="text" class="input-field mono-font" placeholder="root"
-                            required autocomplete="username">
-                        <div class="input-focus-border"></div>
+                        <input id="login" name="login" type="text" class="input-field" placeholder="username" required
+                            autocomplete="username">
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="password">Ключ доступа</label>
+                    <label class="form-label" for="password">Access Key</label>
                     <div class="input-wrapper">
-                        <input id="password" name="password" type="password" class="input-field mono-font"
-                            placeholder="••••••" required autocomplete="current-password">
-                        <div class="input-focus-border"></div>
+                        <input id="password" name="password" type="password" class="input-field" placeholder="••••••"
+                            required autocomplete="current-password">
                     </div>
                 </div>
                 <button class="btn btn-primary" type="submit">
-                    <span class="btn-icon">→</span> Connect
+                    <span class="btn-icon">→</span> Подключиться
                 </button>
             </form>
         </div>
 
         {% else %}
-        <!-- ... (Остальной код меню без изменений, только классы подтянутся из CSS) ... -->
+        <!-- ВНУТРЕННИЙ ИНТЕРФЕЙС -->
         <div class="app-header">
             <div class="app-logo">
                 <img src="{{ url_for('static', filename='bot.png') }}" alt="App Logo">
             </div>
             <h1 id="headerTitle">Меню</h1>
-            <div class="app-subtitle">Active Session</div>
+            <div class="app-subtitle">Session Active: {{ user_info.name }}</div>
         </div>
 
-        <!-- 1. Main Menu Section -->
+        <!-- Главное меню -->
         <div class="page-transition active" id="menuSection">
             <div class="choice-grid">
                 <div class="choice-card" data-action="resources">
-                    <div class="choice-title">Resources</div>
-                    <div class="choice-desc">Infrastructure overview</div>
+                    <div class="choice-title">Ресурсы</div>
+                    <div class="choice-desc mono-font">Статус кластеров и квоты</div>
                 </div>
                 <div class="choice-card" data-action="create">
-                    <div class="choice-title">Deploy</div>
-                    <div class="choice-desc">New instance</div>
+                    <div class="choice-title">Развернуть</div>
+                    <div class="choice-desc mono-font">Создать новый инстанс</div>
                 </div>
             </div>
 
             <div class="logout-container">
                 <form action="{{ url_for('logout') }}" method="POST">
                     <button class="btn btn-secondary" type="submit">
-                        <span class="btn-icon">⇠</span> Disconnect
+                        <span class="btn-icon">×</span> Завершить сеанс
                     </button>
                 </form>
             </div>
         </div>
-
-        <!-- ... (Остальные секции Resources, ServiceSelection, FormSection оставляем как есть, классы сделают работу) ... -->
-
         <!-- Привожу пример для Resources, чтобы показать структуру -->
         <div class="card hidden page-transition" id="resourcesSection">
             <h1 class="section-title">Системные данные</h1>
