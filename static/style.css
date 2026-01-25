@@ -238,21 +238,59 @@ h1 {
     font-weight: 700;
     font-size: 17px;
     cursor: pointer;
-    transition: all 0.2s var(--ease-smooth);
-    position: relative;
-    overflow: hidden;
+
+    /*position: relative; */
+    /*overflow: hidden; */
     user-select: none;
     margin-top: 6px;
+    transition:
+        transform 0.1s cubic-bezier(0.4, 0, 0.2, 1),
+        box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+        filter 0.2s linear,
+        background 0.2s linear;
 }
 
 .btn:active {
-    transform: scale(0.97);
+    transform: translateY(2px);
+    /* Физическое вдавливание */
+    box-shadow:
+        inset 0 2px 4px rgba(0, 0, 0, 0.3),
+        /* Тень внутри */
+        0 1px 2px rgba(0, 0, 0, 0.1);
+    /* Убираем внешнюю тень */
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    /* Тушим верхний блик */
 }
 
 .btn-primary {
     background: var(--accent-gradient);
     color: #fff;
     box-shadow: 0 10px 25px -5px rgba(74, 108, 247, 0.4);
+}
+
+.btn-primary:active {
+    background: linear-gradient(145deg, hsl(var(--primary-hue), 80%, 55%), hsl(var(--primary-hue), 90%, 65%));
+    /* Инверсия градиента */
+    box-shadow:
+        inset 0 3px 6px rgba(0, 0, 0, 0.4),
+        0 0 15px rgba(74, 108, 247, 0.4);
+    /* Электрическая вспышка */
+}
+
+.btn:disabled,
+.btn.disabled,
+.btn[disabled] {
+    cursor: not-allowed;
+    pointer-events: none;
+
+    /* Сохраняем состояние "вдавленности", чтобы не было скачка */
+    transform: translateY(1px);
+    opacity: 0.85;
+    filter: saturate(0.7);
+    /* Чуть приглушаем цвета, но не делаем серым */
+
+    /* Имитируем активный вид, но без вспышки */
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .btn-primary:hover {
@@ -284,22 +322,48 @@ h1 {
     margin: var(--space-sm) 0 var(--space-lg);
 }
 
+/* --- CHOICE GRID FIXES --- */
 .choice-card {
     background: linear-gradient(160deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.005) 100%);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     padding: var(--space-md);
+
+    /* FIX: Явное позиционирование для работы z-index */
     position: relative;
-    transition: all 0.3s var(--ease-smooth);
+    z-index: 1;
+
+    /* FIX: Вместо all используем конкретные свойства, чтобы избежать глитчей при рендере */
+    transition:
+        transform 0.3s var(--ease-smooth),
+        box-shadow 0.3s var(--ease-smooth),
+        border-color 0.3s var(--ease-smooth),
+        background 0.3s var(--ease-smooth);
 }
 
-.choice-card:hover,
-.choice-card:active {
+.choice-card:hover {
+    /* FIX: Поднимаем карточку выше всего остального при наведении */
+    z-index: 10;
+
     background: linear-gradient(160deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
-    border-color: rgba(74, 108, 247, 0.4);
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-soft);
+    border-color: rgba(74, 108, 247, 0.5);
+    /* Более яркая граница */
+    transform: translateY(-4px) scale(1.02);
+    /* Чуть больше масштаб для акцента */
+
+    /* Чистая, глубокая тень, которая ложится ПОВЕРХ кнопки выхода */
+    box-shadow:
+        0 15px 35px -5px rgba(0, 0, 0, 0.6),
+        0 0 1px rgba(74, 108, 247, 0.2);
 }
+
+.choice-card:active {
+    transform: translateY(-1px) scale(0.98);
+    box-shadow: 0 5px 15px -5px rgba(0, 0, 0, 0.5);
+    transition-duration: 0.1s;
+    /* Мгновенная реакция на клик */
+}
+
 
 .choice-title {
     font-size: 21px;
