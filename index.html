@@ -38,10 +38,11 @@
             <div class="app-subtitle">Управление облачной инфраструктурой</div>
         </div>
 
-        <div class="card page-transition active">
-            <!-- OAuth Buttons - Using redirect approach to avoid iframe blocking -->
-            <!-- Keycloak Login Button (Primary) -->
-            <button class="btn btn-keycloak js-auth-btn" type="button" data-provider="Keycloak"
+        <!-- Unified Auth Container -->
+        <div class="card auth-container page-transition active">
+
+            <!-- 1. Keycloak Login Button -->
+            <button class="btn btn-keycloak js-auth-btn convex-btn" type="button" data-provider="Keycloak"
                 data-url="{{ url_for('keycloak_oauth_init') }}">
                 <span class="btn-icon">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -51,156 +52,158 @@
                 </span>
                 Войти через Keycloak
             </button>
-        </div>
 
-
-
-        <!-- Traditional Login Form -->
-        <form action="{{ url_for('login') }}" method="POST">
-            <div class="form-group">
-                <label class="form-label" for="login">логин</label>
-                <input id="login" name="login" type="text" class="input-field" placeholder="admin" required
-                    autocomplete="username">
+            <!-- 2. Electric Separator -->
+            <div class="auth-separator">
+                <span>или</span>
             </div>
-            <div class="form-group">
-                <label class="form-label" for="password">пароль</label>
-                <input id="password" name="password" type="password" class="input-field" placeholder="pass" required
-                    autocomplete="current-password">
-            </div>
-            <button class="btn btn-primary" type="submit">
-                <span class="btn-icon">→</span> Продолжить
-            </button>
-        </form>
-    </div>
-    {% else %}
-    <div class="app-header">
-        <div class="app-logo">
-            <img src="{{ url_for('static', filename='bot.png') }}" alt="App Logo">
-        </div>
-        <h1 id="headerTitle">Меню</h1>
-        <div class="app-subtitle">Управление облачной инфраструктурой</div>
-    </div>
 
-    <!-- 1. Main Menu Section -->
-    <div class="page-transition active" id="menuSection">
-        <div class="choice-grid">
-            <div class="choice-card" data-action="resources">
-                <div class="choice-title">Ресурсы</div>
-                <div class="choice-desc">в вашем проекте</div>
-            </div>
-            <div class="choice-card" data-action="create">
-                <div class="choice-title">Создать</div>
-                <div class="choice-desc">ресурс</div>
-            </div>
-        </div>
-
-        <div class="logout-container">
-            <form action="{{ url_for('logout') }}" method="POST">
-                <button class="btn btn-secondary" type="submit">
-                    <span class="btn-icon">⇠</span> Выйти из аккаунта
+            <!-- 3. Traditional Login Form -->
+            <form action="{{ url_for('login') }}" method="POST">
+                <div class="form-group">
+                    <label class="form-label" for="login">логин</label>
+                    <input id="login" name="login" type="text" class="input-field inset-input" placeholder="admin"
+                        required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="password">пароль</label>
+                    <input id="password" name="password" type="password" class="input-field inset-input"
+                        placeholder="pass" required autocomplete="current-password">
+                </div>
+                <button class="btn btn-primary convex-btn" type="submit">
+                    <span class="btn-icon">→</span> Продолжить
                 </button>
             </form>
         </div>
-    </div>
+        {% else %}
+        <div class="app-header">
+            <div class="app-logo">
+                <img src="{{ url_for('static', filename='bot.png') }}" alt="App Logo">
+            </div>
+            <h1 id="headerTitle">Меню</h1>
+            <div class="app-subtitle">Управление облачной инфраструктурой</div>
+        </div>
 
-    <!-- 2. Resources Info Section -->
-    <div class="card hidden page-transition" id="resourcesSection">
-        <h1 style="font-size:24px;margin-bottom:16px;text-align:left">Ваши данные</h1>
-        <div class="user-info-container">
-            <div class="form-group">
-                <label class="form-label">Имя пользователя</label>
-                <div class="info-value">{{ user_info.name }}</div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Email</label>
-                <div class="info-value">{{ user_info.email }}</div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Project ID</label>
-                <div class="info-value">{{ user_info.cloud_project_id }}</div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Всего ВМ</label>
-                <div class="info-value" id="vmCount">
-                    <span class="spinner vm-spinner"></span>
+        <!-- 1. Main Menu Section -->
+        <div class="page-transition active" id="menuSection">
+            <div class="choice-grid">
+                <div class="choice-card" data-action="resources">
+                    <div class="choice-title">Ресурсы</div>
+                    <div class="choice-desc">в вашем проекте</div>
+                </div>
+                <div class="choice-card" data-action="create">
+                    <div class="choice-title">Создать</div>
+                    <div class="choice-desc">ресурс</div>
                 </div>
             </div>
-        </div>
-        <div class="form-actions">
-            <button class="btn btn-secondary back-to-menu-btn" type="button">
-                <span class="btn-icon">⇠</span> Назад
-            </button>
-        </div>
-    </div>
 
-    <!-- 3. Service Selection Section (Previously mainSection) -->
-    <div class="page-transition hidden" id="serviceSelectionSection">
-        <div class="choice-grid">
-            <div class="choice-card" data-choice="Pangolin">
-                <div class="choice-title">Pangolin</div>
-                <div class="choice-desc">Кластер</div>
-            </div>
-            <div class="choice-card" data-choice="Corax">
-                <div class="choice-title">Corax</div>
-                <div class="choice-desc">Кластер</div>
+            <div class="logout-container">
+                <form action="{{ url_for('logout') }}" method="POST">
+                    <button class="btn btn-secondary" type="submit">
+                        <span class="btn-icon">⇠</span> Выйти из аккаунта
+                    </button>
+                </form>
             </div>
         </div>
-        <div class="form-actions" style="margin-top: 24px;">
-            <button class="btn btn-secondary back-to-menu-btn" type="button">
-                <span class="btn-icon">⇠</span> Назад
-            </button>
-        </div>
-    </div>
 
-    <!-- 4. Form Section -->
-    <div class="card hidden page-transition" id="formSection">
-        <h1 style="font-size:24px;margin-bottom:16px;text-align:left">Задайте параметры</h1>
-        <form class="test-form">
-            <input type="hidden" class="choice-hidden" value="">
-            <input type="hidden" class="cloud-project-id-hidden" value="{{ user_info.cloud_project_id }}">
-
-            <div class="form-group">
-                <label class="form-label" for="subnet">Подсеть</label>
-                <select id="subnet" class="input-field select-field subnet-select" required>
-                    <option value="" disabled selected>Выберите подсеть</option>
-                    <option value="10.10.10.0/24">10.10.10.0/24 (Production)</option>
-                    <option value="172.0.0.0/24">172.17.0.0/24 (Staging)</option>
-                    <option value="192.0.0.0/24">192.168.51.0/24 (Development)</option>
-                </select>
+        <!-- 2. Resources Info Section -->
+        <div class="card hidden page-transition" id="resourcesSection">
+            <h1 style="font-size:24px;margin-bottom:16px;text-align:left">Ваши данные</h1>
+            <div class="user-info-container">
+                <div class="form-group">
+                    <label class="form-label">Имя пользователя</label>
+                    <div class="info-value">{{ user_info.name }}</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <div class="info-value">{{ user_info.email }}</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Project ID</label>
+                    <div class="info-value">{{ user_info.cloud_project_id }}</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Всего ВМ</label>
+                    <div class="info-value" id="vmCount">
+                        <span class="spinner vm-spinner"></span>
+                    </div>
+                </div>
             </div>
-
-            <div class="form-group">
-                <label class="form-label" for="flavor">Конфигурация</label>
-                <select id="flavor" class="input-field select-field flavor-select" required>
-                    <option value="" disabled selected>Выберите конфигурацию</option>
-                    <option value="2/4 30%">2 ядра / 4 ГБ RAM (30%)</option>
-                    <option value="4/8 30%">4 ядра / 8 ГБ RAM (30%)</option>
-                    <option value="8/16 30%">8 ядер / 16 ГБ RAM (30%)</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="title">Название ВМ</label>
-                <input id="title" type="text" class="input-field title-inp" placeholder="Например: web-server-prod"
-                    required>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="desc">Описание</label>
-                <input id="desc" type="text" class="input-field desc-inp" placeholder="Назначение сервера">
-            </div>
-
             <div class="form-actions">
-                <button class="btn btn-primary s-btn" type="button">
-                    <span class="btn-icon">→</span> Создать кластер
-                </button>
-                <button class="btn btn-secondary back-to-services-btn" type="button">
+                <button class="btn btn-secondary back-to-menu-btn" type="button">
                     <span class="btn-icon">⇠</span> Назад
                 </button>
             </div>
-        </form>
-    </div>
-    {% endif %}
+        </div>
+
+        <!-- 3. Service Selection Section (Previously mainSection) -->
+        <div class="page-transition hidden" id="serviceSelectionSection">
+            <div class="choice-grid">
+                <div class="choice-card" data-choice="Pangolin">
+                    <div class="choice-title">Pangolin</div>
+                    <div class="choice-desc">Кластер</div>
+                </div>
+                <div class="choice-card" data-choice="Corax">
+                    <div class="choice-title">Corax</div>
+                    <div class="choice-desc">Кластер</div>
+                </div>
+            </div>
+            <div class="form-actions" style="margin-top: 24px;">
+                <button class="btn btn-secondary back-to-menu-btn" type="button">
+                    <span class="btn-icon">⇠</span> Назад
+                </button>
+            </div>
+        </div>
+
+        <!-- 4. Form Section -->
+        <div class="card hidden page-transition" id="formSection">
+            <h1 style="font-size:24px;margin-bottom:16px;text-align:left">Задайте параметры</h1>
+            <form class="test-form">
+                <input type="hidden" class="choice-hidden" value="">
+                <input type="hidden" class="cloud-project-id-hidden" value="{{ user_info.cloud_project_id }}">
+
+                <div class="form-group">
+                    <label class="form-label" for="subnet">Подсеть</label>
+                    <select id="subnet" class="input-field select-field subnet-select" required>
+                        <option value="" disabled selected>Выберите подсеть</option>
+                        <option value="10.10.10.0/24">10.10.10.0/24 (Production)</option>
+                        <option value="172.0.0.0/24">172.17.0.0/24 (Staging)</option>
+                        <option value="192.0.0.0/24">192.168.51.0/24 (Development)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="flavor">Конфигурация</label>
+                    <select id="flavor" class="input-field select-field flavor-select" required>
+                        <option value="" disabled selected>Выберите конфигурацию</option>
+                        <option value="2/4 30%">2 ядра / 4 ГБ RAM (30%)</option>
+                        <option value="4/8 30%">4 ядра / 8 ГБ RAM (30%)</option>
+                        <option value="8/16 30%">8 ядер / 16 ГБ RAM (30%)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="title">Название ВМ</label>
+                    <input id="title" type="text" class="input-field title-inp" placeholder="Например: web-server-prod"
+                        required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="desc">Описание</label>
+                    <input id="desc" type="text" class="input-field desc-inp" placeholder="Назначение сервера">
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn btn-primary s-btn" type="button">
+                        <span class="btn-icon">→</span> Создать кластер
+                    </button>
+                    <button class="btn btn-secondary back-to-services-btn" type="button">
+                        <span class="btn-icon">⇠</span> Назад
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Custom Alert Modal -->
