@@ -217,35 +217,40 @@
             </form>
         </div>
 
-        <!-- 5. Deployment Section (Новая карточка деплоя) -->
+        <!-- 5. Deployment Section (Строгий инженерный стиль) -->
         <div class="card hidden page-transition" id="deploymentSection">
-            <!-- Хедер с пульсацией -->
+            <!-- Хедер с минималистичной индикацией -->
             <div class="deploy-header">
                 <div class="status-indicator-ring">
+                    <!-- Убираем пульсацию или делаем её очень тонкой в CSS -->
                     <div class="pulse-ring"></div>
-                    <span class="status-icon" id="deployIcon">🚀</span>
+                    <span class="status-icon" id="deployIcon">
+                        <!-- SVG иконка инфраструктуры (серверы/слои) -->
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                            <polyline points="2 17 12 22 22 17"></polyline>
+                            <polyline points="2 12 12 17 22 12"></polyline>
+                        </svg>
+                    </span>
                 </div>
                 <div class="deploy-title-group">
-                    <h1 id="deployTitle" style="font-size: 20px; margin-bottom: 4px;">Инициализация...</h1>
-                    <div class="deploy-subtitle" id="deploySubtitle">Подготовка ресурсов</div>
+                    <h1 id="deployTitle" style="font-size: 18px; margin-bottom: 2px; font-weight: 600;">Deployment in
+                        progress</h1>
+                    <div class="deploy-subtitle" id="deploySubtitle">Provisioning infrastructure</div>
                 </div>
             </div>
 
-            <!-- Главный Hero Прогресс -->
+            <!-- Главный Hero Прогресс (сделаем его тоньше и без свечения в CSS) -->
             <div class="hero-progress-wrapper">
                 <div class="hero-progress-bar" id="heroProgressBar" style="width: 0%"></div>
             </div>
 
-            <!-- Терминал (Geek UI) -->
+            <!-- Терминал (Чистый TTY стиль) -->
             <div class="mini-terminal">
-                <div class="terminal-header">
-                    <span class="terminal-dot red"></span>
-                    <span class="terminal-dot yellow"></span>
-                    <span class="terminal-dot green"></span>
-                </div>
                 <div class="terminal-content">
-                    <span class="prompt">$</span> <span id="terminalText">Waiting for pipeline agent...</span><span
-                        class="cursor">_</span>
+                    <span class="prompt">#</span> <span id="terminalText">Initializing agent...</span><span
+                        class="cursor">█</span>
                 </div>
             </div>
 
@@ -256,7 +261,8 @@
 
             <!-- Кнопки действий -->
             <div class="form-actions" id="deployActions">
-                <button class="btn btn-secondary" id="hideDeployBtn" type="button">
+                <button class="btn btn-secondary" id="hideDeployBtn" type="button"
+                    style="height: 44px; font-size: 14px;">
                     <span class="btn-icon">×</span> Свернуть в фон
                 </button>
             </div>

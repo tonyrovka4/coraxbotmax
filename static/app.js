@@ -774,7 +774,7 @@ class CloudManagerApp {
                         if (pulseRing) pulseRing.style.display = 'none';
 
                         if (data.status === 'success') {
-                            if (deployIcon) deployIcon.textContent = '✅';
+                            if (deployIcon) deployIcon.style.color = 'var(--success-color)';
                             if (heroBar) heroBar.style.background = '#34C759'; // Зеленый
 
                             // Меняем кнопку "Свернуть" на "Готово"

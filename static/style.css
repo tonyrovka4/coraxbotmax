@@ -731,9 +731,13 @@ h1 {
 }
 
 .status-icon {
-    font-size: 20px;
+    color: var(--accent-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     z-index: 2;
-    filter: drop-shadow(0 0 10px rgba(74, 108, 247, 0.5));
+    filter: none;
+    /* Убрали drop-shadow */
 }
 
 .pulse-ring {
@@ -741,9 +745,10 @@ h1 {
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    border: 2px solid var(--accent-color);
+    border: 1px solid var(--accent-color);
+    /* Тоньше линия */
     animation: pulse 2s infinite;
-    opacity: 0;
+    opacity: 0.3;
 }
 
 @keyframes pulse {
@@ -765,63 +770,37 @@ h1 {
 
 /* Hero Progress Bar */
 .hero-progress-wrapper {
-    height: 6px;
-    background: rgba(255, 255, 255, 0.05);
+    height: 4px;
+    /* Тоньше */
+    background: rgba(255, 255, 255, 0.03);
     border-radius: 10px;
     overflow: hidden;
     margin-bottom: var(--space-md);
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .hero-progress-bar {
     height: 100%;
-    background: var(--accent-gradient);
-    box-shadow: 0 0 12px var(--accent-color);
+    background: var(--accent-color);
+    /* Плоский цвет вместо градиента */
     transition: width 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
     width: 0%;
 }
 
 /* Terminal Style */
 .mini-terminal {
-    background: #09090b;
-    /* Темнее фона */
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-sm);
-    padding: 12px;
+    background: #000;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 10px 14px;
+    border-radius: 4px;
+    /* Меньше скругление */
     margin-bottom: var(--space-lg);
-    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-    font-size: 12px;
-    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5);
-}
-
-.terminal-header {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 8px;
-    opacity: 0.5;
-}
-
-.terminal-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-}
-
-.terminal-dot.red {
-    background: #FF5F56;
-}
-
-.terminal-dot.yellow {
-    background: #FFBD2E;
-}
-
-.terminal-dot.green {
-    background: #27C93F;
 }
 
 .terminal-content {
-    color: #27C93F;
-    /* Terminal Green */
+    color: #ececec;
+    /* Не такой ядовито-зеленый, ближе к обычному тексту */
+    font-family: 'JetBrains Mono', 'Menlo', monospace;
+    font-size: 12px;
     line-height: 1.4;
 }
 
@@ -831,6 +810,11 @@ h1 {
 }
 
 .cursor {
+    display: inline-block;
+    width: 8px;
+    height: 15px;
+    background: var(--accent-color);
+    margin-left: 4px;
     animation: blink 1s step-end infinite;
 }
 
