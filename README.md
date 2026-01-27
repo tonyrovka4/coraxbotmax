@@ -5,8 +5,8 @@ Max bot with mini-app for managing cloud resources and deploying Corax clusters 
 ## Setup
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv .max
+source .max/bin/activate
 pip install -r requirements.txt
 ```
 

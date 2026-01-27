@@ -227,6 +227,10 @@ include:
   - project: matveykolchuk/coraxci
     ref: main
     file: ci/jobs/jam.yml
+  - project: matveykolchuk/coraxci
+    ref: main
+    file: ci/jobs/restart.yml
+
 
 """
     

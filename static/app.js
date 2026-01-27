@@ -12,7 +12,7 @@ class CloudManagerApp {
         if (!this.app || !this.app.initData) {
             document.body.innerHTML = `
                 <div style="display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;text-align:center;padding:20px;">
-                    <h1 style="margin-bottom:10px;">⛔ Доступ запрещен</h1>
+                    <h1 style="margin-bottom:10px;">Доступ запрещен</h1>
                     <p>Пожалуйста, откройте это приложение через Max Messenger.</p>
                 </div>
             `;
@@ -674,7 +674,7 @@ class CloudManagerApp {
                         const statusMessages = {
                             'pending': 'Ожидание запуска...',
                             'running': `Выполнение... ${data.percent}%`,
-                            'success': '✅ Пайплайн успешно завершен!',
+                            'success': 'Пайплайн успешно завершен!',
                             'failed': '❌ Пайплайн завершился с ошибкой',
                             'canceled': '⚠️ Пайплайн отменен',
                             'skipped': '⏭️ Пайплайн пропущен',
