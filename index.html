@@ -216,6 +216,51 @@
                 </div>
             </form>
         </div>
+
+        <!-- 5. Deployment Section (Новая карточка деплоя) -->
+        <div class="card hidden page-transition" id="deploymentSection">
+            <!-- Хедер с пульсацией -->
+            <div class="deploy-header">
+                <div class="status-indicator-ring">
+                    <div class="pulse-ring"></div>
+                    <span class="status-icon" id="deployIcon">🚀</span>
+                </div>
+                <div class="deploy-title-group">
+                    <h1 id="deployTitle" style="font-size: 20px; margin-bottom: 4px;">Инициализация...</h1>
+                    <div class="deploy-subtitle" id="deploySubtitle">Подготовка ресурсов</div>
+                </div>
+            </div>
+
+            <!-- Главный Hero Прогресс -->
+            <div class="hero-progress-wrapper">
+                <div class="hero-progress-bar" id="heroProgressBar" style="width: 0%"></div>
+            </div>
+
+            <!-- Терминал (Geek UI) -->
+            <div class="mini-terminal">
+                <div class="terminal-header">
+                    <span class="terminal-dot red"></span>
+                    <span class="terminal-dot yellow"></span>
+                    <span class="terminal-dot green"></span>
+                </div>
+                <div class="terminal-content">
+                    <span class="prompt">$</span> <span id="terminalText">Waiting for pipeline agent...</span><span
+                        class="cursor">_</span>
+                </div>
+            </div>
+
+            <!-- Вертикальный Таймлайн -->
+            <div class="timeline-container" id="deployTimeline">
+                <!-- Сюда JS будет добавлять этапы -->
+            </div>
+
+            <!-- Кнопки действий -->
+            <div class="form-actions" id="deployActions">
+                <button class="btn btn-secondary" id="hideDeployBtn" type="button">
+                    <span class="btn-icon">×</span> Свернуть в фон
+                </button>
+            </div>
+        </div>
         {% endif %}
     </div>
 
