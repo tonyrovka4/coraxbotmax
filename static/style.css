@@ -809,14 +809,6 @@ h1 {
     margin-right: 6px;
 }
 
-.cursor {
-    display: inline-block;
-    width: 8px;
-    height: 15px;
-    background: var(--accent-color);
-    margin-left: 4px;
-    animation: blink 1s step-end infinite;
-}
 
 @keyframes blink {
     50% {
