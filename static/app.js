@@ -719,28 +719,50 @@ class CloudManagerApp {
                         }
                     }
 
-                    // 3. Обновляем Таймлайн (умный рендер)
+                    // 3. Обновляем Таймлайн (Умное обновление без перерисовки)
                     if (timeline && Array.isArray(data.stages)) {
-                        timeline.innerHTML = ''; // Простая перерисовка
 
-                        data.stages.forEach(stage => {
+                        // ВАЖНО: Мы НЕ делаем timeline.innerHTML = ''; 
+
+                        data.stages.forEach((stage, index) => {
                             const isRunning = stage.status === 'running';
                             const isCompleted = ['success', 'completed'].includes(stage.status);
 
-                            let itemClass = 'timeline-item';
-                            if (isRunning) itemClass += ' active';
-                            if (isCompleted) itemClass += ' completed';
+                            // Формируем правильный набор классов
+                            let targetClass = 'timeline-item';
+                            if (isRunning) targetClass += ' active';
+                            if (isCompleted) targetClass += ' completed';
 
-                            const html = `
-                                <div class="${itemClass}">
-                                    <div class="timeline-dot"></div>
-                                    <div class="timeline-row">
-                                        <span class="timeline-name">${stage.name || 'Unknown step'}</span>
-                                        <span class="timeline-percent">${stage.percent}%</span>
+                            // Пытаемся найти уже существующий элемент по индексу
+                            let existingItem = timeline.children[index];
+
+                            if (existingItem) {
+                                // ВАРИАНТ А: Элемент уже есть -> Обновляем только то, что изменилось
+
+                                // 1. Обновляем классы (цвета точек)
+                                if (existingItem.className !== targetClass) {
+                                    existingItem.className = targetClass;
+                                }
+
+                                // 2. Обновляем проценты (текст)
+                                const percentEl = existingItem.querySelector('.timeline-percent');
+                                if (percentEl) {
+                                    percentEl.textContent = `${stage.percent}%`;
+                                }
+
+                            } else {
+                                // ВАРИАНТ Б: Элемента нет -> Создаем новый (только он сыграет анимацию)
+                                const html = `
+                                    <div class="${targetClass}">
+                                        <div class="timeline-dot"></div>
+                                        <div class="timeline-row">
+                                            <span class="timeline-name">${stage.name || 'Unknown step'}</span>
+                                            <span class="timeline-percent">${stage.percent}%</span>
+                                        </div>
                                     </div>
-                                </div>
-                            `;
-                            timeline.insertAdjacentHTML('beforeend', html);
+                                `;
+                                timeline.insertAdjacentHTML('beforeend', html);
+                            }
                         });
                     }
 
