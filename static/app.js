@@ -32,6 +32,8 @@ class CloudManagerApp {
         this.resourcesSection = document.getElementById('resourcesSection');
         this.serviceSelectionSection = document.getElementById('serviceSelectionSection');
         this.formSection = document.getElementById('formSection');
+        this.deploymentSection = document.getElementById('deploymentSection');
+        this.setupDeploymentActions();
 
         // Setup custom alert modal
         this.setupCustomAlert();
@@ -429,6 +431,25 @@ class CloudManagerApp {
     }
 
     /**
+     * Обработчик действий на экране деплоя
+     */
+    setupDeploymentActions() {
+        const hideBtn = document.getElementById('hideDeployBtn');
+        if (hideBtn) {
+            hideBtn.addEventListener('click', () => {
+                // Останавливаем активный опрос, чтобы не грузить сеть
+                this.stopStatusPolling();
+
+                // Показываем уведомление
+                this.showAlert('Деплой продолжается в фоне. Проверьте раздел "Ресурсы" позже.', 'info');
+
+                // Возвращаемся в меню
+                this.switchPage(this.menuSection);
+            });
+        }
+    }
+
+    /**
      * Validate and process form data
      */
     async handleFormSubmit() {
@@ -453,7 +474,6 @@ class CloudManagerApp {
             this.showAlert("Пожалуйста, выберите подсеть и конфигурацию");
             return;
         }
-
         if (!title) {
             this.showAlert("Введите название виртуальной машины");
             return;
@@ -461,16 +481,34 @@ class CloudManagerApp {
 
         const data = { choice, title, desc: description, subnet, flavor, cloud_project_id: cloudProjectId };
 
-        // Show loading state
-        if (submitBtn) {
-            this.setButtonLoading(submitBtn, true);
-        }
-
-        // Show status section
-        this.showStatusSection('Создание проекта...');
+        if (submitBtn) this.setButtonLoading(submitBtn, true);
 
         try {
-            // Send request to backend API instead of using sendData
+            // 1. ИНИЦИАЛИЗАЦИЯ UI ДЕПЛОЯ (МЕТАМОРФОЗА)
+            // Перед отправкой запроса подготовим экран
+            const deployTitle = document.getElementById('deployTitle');
+            const deploySubtitle = document.getElementById('deploySubtitle');
+            const terminalText = document.getElementById('terminalText');
+            const heroBar = document.getElementById('heroProgressBar');
+            const timeline = document.getElementById('deployTimeline');
+            const hideBtn = document.getElementById('hideDeployBtn');
+
+            if (deployTitle) deployTitle.textContent = `Запуск ${title}...`;
+            if (deploySubtitle) deploySubtitle.textContent = `Конфигурация: ${flavor}`;
+            if (terminalText) terminalText.textContent = "Sending request to control plane...";
+            if (heroBar) heroBar.style.width = '5%'; // Начальный прогресс
+            if (timeline) timeline.innerHTML = ''; // Очистка старых этапов
+
+            // Сбрасываем кнопку "Свернуть" в дефолтное состояние
+            if (hideBtn) {
+                hideBtn.innerHTML = '<span class="btn-icon">×</span> Свернуть в фон';
+                hideBtn.onclick = null; // Сброс старых обработчиков если были
+                this.setupDeploymentActions(); // Перепривязка
+            }
+
+            // Переключаем страницу ПЕРЕД получением ответа для мгновенной реакции
+            // (или можно после, если хотите показать ошибку на форме)
+
             const response = await fetch('/api/create-cluster', {
                 method: 'POST',
                 headers: {
@@ -483,25 +521,19 @@ class CloudManagerApp {
             const result = await response.json();
 
             if (result.success) {
-                // Update status with pipeline info
-                this.updateStatusSection(
-                    'Пайплайн запущен',
-                    result.pipeline_url,
-                    result.project_url
-                );
+                // Переход на экран деплоя (если еще не перешли)
+                this.switchPage(this.deploymentSection);
 
-                // Start polling for pipeline status
+                // Запуск поллинга с новым UI
                 this.startStatusPolling(result.project_id, result.pipeline_id);
             } else {
-                this.showStatusError(result.error || 'Ошибка создания кластера');
+                this.showAlert(result.error || 'Ошибка создания кластера');
             }
         } catch (error) {
             console.error('Error creating cluster:', error);
-            this.showStatusError(`Ошибка подключения: ${error.message}`);
+            this.showAlert(`Ошибка подключения: ${error.message}`);
         } finally {
-            if (submitBtn) {
-                this.setButtonLoading(submitBtn, false);
-            }
+            if (submitBtn) this.setButtonLoading(submitBtn, false);
         }
     }
 
@@ -638,160 +670,139 @@ class CloudManagerApp {
      * Start polling for pipeline status updates
      */
     startStatusPolling(projectId, pipelineId) {
-        const progressBar = document.getElementById('progressBar');
-        const statusText = document.getElementById('statusText');
-        const stageStatus = document.getElementById('stageStatus');
-        const stageProgress = document.getElementById('stageProgress');
+        // UI Элементы
+        const heroBar = document.getElementById('heroProgressBar');
+        const terminalText = document.getElementById('terminalText');
+        const timeline = document.getElementById('deployTimeline');
+        const deployIcon = document.getElementById('deployIcon');
+        const pulseRing = document.querySelector('.pulse-ring');
+        const hideBtn = document.getElementById('hideDeployBtn');
 
-        // Clear any existing polling interval
-        if (this.statusPollingInterval) {
-            clearInterval(this.statusPollingInterval);
-        }
+        if (this.statusPollingInterval) clearInterval(this.statusPollingInterval);
+
+        // Включаем пульсацию
+        if (pulseRing) pulseRing.style.display = 'block';
 
         let errorCount = 0;
-        const maxErrors = 3;
-        let pollInterval = 5000; // Start with 5 seconds
+        let pollInterval = 4000;
 
         const poll = async () => {
             try {
                 const res = await fetch(`/api/pipeline-status/${projectId}/${pipelineId}`, {
-                    headers: {
-                        'X-Auth-Data': this.initData
-                    }
+                    headers: { 'X-Auth-Data': this.initData }
                 });
                 const data = await res.json();
 
                 if (data.success) {
-                    errorCount = 0; // Reset error count on success
+                    errorCount = 0;
 
-                    // Update progress bar
-                    if (progressBar) {
-                        progressBar.style.width = `${data.percent}%`;
+                    // 1. Обновляем Hero Progress
+                    if (heroBar) {
+                        // Минимум 5%, чтобы было видно
+                        const p = Math.max(data.percent || 0, 5);
+                        heroBar.style.width = `${p}%`;
                     }
 
-                    // Update status text
-                    if (statusText) {
-                        const statusMessages = {
-                            'pending': 'Ожидание запуска...',
-                            'running': `Выполнение... ${data.percent}%`,
-                            'success': 'Пайплайн успешно завершен!',
-                            'failed': '❌ Пайплайн завершился с ошибкой',
-                            'canceled': '⚠️ Пайплайн отменен',
-                            'skipped': '⏭️ Пайплайн пропущен',
-                            'manual': '⏸️ Ожидание ручного запуска'
-                        };
-                        statusText.textContent = statusMessages[data.status] || `Статус: ${data.status}`;
-                    }
-
-                    if (stageStatus) {
-                        if (data.running_stage) {
-                            stageStatus.textContent = `Сейчас выполняется: ${data.running_stage}`;
-                            stageStatus.classList.remove('hidden');
-                        } else if (typeof data.total_stages === 'number' && data.total_stages > 0) {
-                            stageStatus.textContent = `Готово этапов: ${data.completed_stages ?? 0} из ${data.total_stages}`;
-                            stageStatus.classList.remove('hidden');
+                    // 2. Обновляем Терминал
+                    if (terminalText) {
+                        if (data.status === 'success') {
+                            terminalText.textContent = "Process completed successfully.";
+                            terminalText.style.color = '#34C759';
+                        } else if (data.status === 'failed') {
+                            terminalText.textContent = "Critical Error. Process aborted.";
+                            terminalText.style.color = '#FF3B30';
                         } else {
-                            stageStatus.classList.add('hidden');
+                            // Показываем текущий активный этап или статус
+                            const activeStage = data.running_stage || data.status;
+                            terminalText.textContent = `Executing: ${activeStage}...`;
+                            terminalText.style.color = '#27C93F';
                         }
                     }
 
-                    if (stageProgress) {
-                        if (Array.isArray(data.stages) && data.stages.length) {
-                            stageProgress.replaceChildren();
-                            data.stages.forEach(stage => {
-                                const safeStatus = ['pending', 'queued', 'running', 'completed', 'failed', 'canceled'].includes(stage.status)
-                                    ? stage.status
-                                    : 'pending';
-                                const safePercent = Number.isFinite(stage.percent)
-                                    ? Math.min(Math.max(stage.percent, 0), 100)
-                                    : 0;
-                                const stagePercent = `${safePercent}%`;
-                                const stageName = stage.name || this.unknownStageLabel;
+                    // 3. Обновляем Таймлайн (Умное обновление без перерисовки)
+                    if (timeline && Array.isArray(data.stages)) {
 
-                                const stageRow = document.createElement('div');
-                                stageRow.className = 'stage-row';
+                        // ВАЖНО: Мы НЕ делаем timeline.innerHTML = ''; 
 
-                                const stagePill = document.createElement('div');
-                                stagePill.className = `stage-pill stage-${safeStatus}`;
+                        data.stages.forEach((stage, index) => {
+                            const isRunning = stage.status === 'running';
+                            const isCompleted = ['success', 'completed'].includes(stage.status);
 
-                                const nameSpan = document.createElement('span');
-                                nameSpan.textContent = stageName;
+                            // Формируем правильный набор классов
+                            let targetClass = 'timeline-item';
+                            if (isRunning) targetClass += ' active';
+                            if (isCompleted) targetClass += ' completed';
 
-                                const percentSpan = document.createElement('span');
-                                percentSpan.textContent = stagePercent;
+                            // Пытаемся найти уже существующий элемент по индексу
+                            let existingItem = timeline.children[index];
 
-                                stagePill.appendChild(nameSpan);
-                                stagePill.appendChild(percentSpan);
+                            if (existingItem) {
+                                // ВАРИАНТ А: Элемент уже есть -> Обновляем только то, что изменилось
 
-                                const stageMeter = document.createElement('div');
-                                stageMeter.className = 'stage-meter';
+                                // 1. Обновляем классы (цвета точек)
+                                if (existingItem.className !== targetClass) {
+                                    existingItem.className = targetClass;
+                                }
 
-                                const meterFill = document.createElement('span');
-                                meterFill.style.width = stagePercent;
+                                // 2. Обновляем проценты (текст)
+                                const percentEl = existingItem.querySelector('.timeline-percent');
+                                if (percentEl) {
+                                    percentEl.textContent = `${stage.percent}%`;
+                                }
 
-                                stageMeter.appendChild(meterFill);
-                                stageRow.appendChild(stagePill);
-                                stageRow.appendChild(stageMeter);
-
-                                stageProgress.appendChild(stageRow);
-                            });
-                            stageProgress.classList.remove('hidden');
-                        } else {
-                            stageProgress.classList.add('hidden');
-                        }
+                            } else {
+                                // ВАРИАНТ Б: Элемента нет -> Создаем новый (только он сыграет анимацию)
+                                const html = `
+                                    <div class="${targetClass}">
+                                        <div class="timeline-dot"></div>
+                                        <div class="timeline-row">
+                                            <span class="timeline-name">${stage.name || 'Unknown step'}</span>
+                                            <span class="timeline-percent">${stage.percent}%</span>
+                                        </div>
+                                    </div>
+                                `;
+                                timeline.insertAdjacentHTML('beforeend', html);
+                            }
+                        });
                     }
 
-                    // Stop polling when pipeline is complete
-                    if (['success', 'failed', 'canceled', 'skipped'].includes(data.status)) {
+                    // 4. Финишная прямая
+                    if (['success', 'failed', 'canceled'].includes(data.status)) {
                         this.stopStatusPolling();
 
-                        // Hide spinner when complete
-                        const spinner = document.querySelector('.status-spinner');
-                        if (spinner) spinner.classList.add('hidden');
+                        // Выключаем пульсацию
+                        if (pulseRing) pulseRing.style.display = 'none';
 
-                        // Update progress bar color on completion
-                        if (progressBar) {
-                            if (data.status === 'success') {
-                                progressBar.classList.add('progress-success');
-                            } else if (data.status === 'failed') {
-                                progressBar.classList.add('progress-failed');
+                        if (data.status === 'success') {
+                            if (deployIcon) deployIcon.style.color = 'var(--success-color)';
+                            if (heroBar) heroBar.style.background = '#34C759'; // Зеленый
+
+                            // Меняем кнопку "Свернуть" на "Готово"
+                            if (hideBtn) {
+                                hideBtn.className = 'btn btn-primary'; // Делаем главной кнопкой
+                                hideBtn.innerHTML = '<span class="btn-icon">→</span> Перейти к ресурсам';
+                                // Переопределяем поведение
+                                hideBtn.replaceWith(hideBtn.cloneNode(true)); // Сброс листенеров
+                                document.getElementById('hideDeployBtn').addEventListener('click', () => {
+                                    this.switchPage(this.resourcesSection);
+                                    this.startVmCountPolling();
+                                });
                             }
-                        }
-                        if (stageStatus && Array.isArray(data.stages)) {
-                            const lastStage = data.stages.slice().reverse().find(stage => ['completed', 'failed', 'canceled'].includes(stage.status));
-                            if (lastStage) {
-                                stageStatus.textContent = `Готово! Последний этап: ${lastStage.name || this.unknownStageLabel}`;
-                                stageStatus.classList.remove('hidden');
-                            }
+                        } else {
+                            if (deployIcon) deployIcon.textContent = '❌';
+                            if (heroBar) heroBar.style.background = '#FF3B30'; // Красный
                         }
                         return;
                     }
-
-                    // Increase poll interval for long-running pipelines (max 30 seconds)
-                    if (pollInterval < 30000) {
-                        pollInterval = Math.min(pollInterval * 1.2, 30000);
-                    }
-                } else {
-                    throw new Error(data.error || 'Unknown error');
                 }
             } catch (error) {
-                console.error('Error polling pipeline status:', error);
+                console.error('Polling error', error);
                 errorCount++;
-
-                if (errorCount >= maxErrors) {
-                    this.stopStatusPolling();
-                    if (statusText) {
-                        statusText.textContent = '⚠️ Не удалось получить статус пайплайна';
-                    }
-                    return;
-                }
+                if (errorCount > 5) this.stopStatusPolling();
             }
-
-            // Schedule next poll
             this.statusPollingTimeout = setTimeout(poll, pollInterval);
         };
 
-        // Start polling
         poll();
     }
 

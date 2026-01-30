@@ -179,9 +179,9 @@
                     <label class="form-label" for="subnet">Подсеть</label>
                     <select id="subnet" class="input-field select-field subnet-select" required>
                         <option value="" disabled selected>Выберите подсеть</option>
-                        <option value="10.10.10.0/24">10.10.10.0/24 (Production)</option>
-                        <option value="172.0.0.0/24">172.17.0.0/24 (Staging)</option>
-                        <option value="192.0.0.0/24">192.168.51.0/24 (Development)</option>
+                        <option value="10.10.10.0/24">10.10.10.0/24</option>
+                        <option value="10.15.15.0/24">10.15.15.0/24</option>
+                        <option value="10.20.20.0/24">10.20.20.0/24</option>
                     </select>
                 </div>
 
@@ -197,13 +197,13 @@
 
                 <div class="form-group">
                     <label class="form-label" for="title">Название ВМ</label>
-                    <input id="title" type="text" class="input-field title-inp" placeholder="Например: web-server-prod"
+                    <input id="title" type="text" class="input-field title-inp" placeholder="Например: Test"
                         required>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="desc">Описание</label>
-                    <input id="desc" type="text" class="input-field desc-inp" placeholder="Назначение сервера">
+                    <label class="form-label" for="desc">Номер кластера</label>
+                    <input id="desc" type="text" class="input-field desc-inp" placeholder="Будет в описании репозитория">
                 </div>
 
                 <div class="form-actions">
@@ -215,6 +215,56 @@
                     </button>
                 </div>
             </form>
+        </div>
+
+        <!-- 5. Deployment Section (Строгий инженерный стиль) -->
+        <div class="card hidden page-transition" id="deploymentSection">
+            <!-- Хедер с минималистичной индикацией -->
+            <div class="deploy-header">
+                <div class="status-indicator-ring">
+                    <!-- Убираем пульсацию или делаем её очень тонкой в CSS -->
+                    <div class="pulse-ring"></div>
+                    <span class="status-icon" id="deployIcon">
+                        <!-- SVG иконка инфраструктуры (серверы/слои) -->
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                            <polyline points="2 17 12 22 22 17"></polyline>
+                            <polyline points="2 12 12 17 22 12"></polyline>
+                        </svg>
+                    </span>
+                </div>
+                <div class="deploy-title-group">
+                    <h1 id="deployTitle" style="font-size: 18px; margin-bottom: 2px; font-weight: 600;">Deployment in
+                        progress</h1>
+                    <div class="deploy-subtitle" id="deploySubtitle">Provisioning infrastructure</div>
+                </div>
+            </div>
+
+            <!-- Главный Hero Прогресс (сделаем его тоньше и без свечения в CSS) -->
+            <div class="hero-progress-wrapper">
+                <div class="hero-progress-bar" id="heroProgressBar" style="width: 0%"></div>
+            </div>
+
+            <!-- Терминал (Чистый TTY стиль) -->
+            <div class="mini-terminal">
+                <div class="terminal-content">
+                    <span class="prompt">#</span> <span id="terminalText">Initializing agent...</span>
+                </div>
+            </div>
+
+            <!-- Вертикальный Таймлайн -->
+            <div class="timeline-container" id="deployTimeline">
+                <!-- Сюда JS будет добавлять этапы -->
+            </div>
+
+            <!-- Кнопки действий -->
+            <div class="form-actions" id="deployActions">
+                <button class="btn btn-secondary" id="hideDeployBtn" type="button"
+                    style="height: 44px; font-size: 14px;">
+                    <span class="btn-icon">×</span> Свернуть в фон
+                </button>
+            </div>
         </div>
         {% endif %}
     </div>
