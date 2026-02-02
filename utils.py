@@ -378,7 +378,7 @@ infra:
       oversubscription_ratio: '1:1'
       ip: ''
   cloud:
-    project_name: {project_name}
+    project_name: maxgis
     cluster_number: '{cluster_number}'
     cluster_subnet: {subnet}
     vpc_name: Default
