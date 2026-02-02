@@ -24,6 +24,10 @@ GITLAB_GROUP_ID = os.getenv("GITLAB_GROUP_ID", "")
 GITLAB_INCLUDE_PROJECT = os.getenv("GITLAB_INCLUDE_PROJECT", "")
 GITLAB_INCLUDE_FILE = os.getenv("GITLAB_INCLUDE_FILE", ".gitlab-ci.yml")
 
+# Pangolin configuration
+PANGOLIN_GITLAB_TOKEN = os.getenv("PANGOLIN_GITLAB_TOKEN", "")
+PANGOLIN_GITLAB_GROUP_ID = os.getenv("PANGOLIN_GITLAB_GROUP_ID", "")
+
 ENGINE_REPO = os.getenv("ENGINE_REPO")
 ENGINE_TEMP_DIR = os.getenv("ENGINE_TEMP_DIR")
 CI_JOB_TOKEN = os.getenv("CI_JOB_TOKEN", "")
@@ -99,23 +103,20 @@ def parse_subnet(subnet: str) -> dict:
     }
 
 
-def get_gitlab_client():
+def get_gitlab_client(token=None):
     """Create and return a GitLab client instance."""
-    if not GITLAB_URL or not GITLAB_TOKEN:
-        raise ValueError("GitLab configuration missing: GITLAB_URL and GITLAB_TOKEN required")
-    return gitlab.Gitlab(GITLAB_URL, private_token=GITLAB_TOKEN)
+    if not GITLAB_URL:
+        raise ValueError("GitLab configuration missing: GITLAB_URL required")
+    
+    target_token = token if token else GITLAB_TOKEN
+    if not target_token:
+        raise ValueError("GitLab Token is missing")
+        
+    return gitlab.Gitlab(GITLAB_URL, private_token=target_token)
 
 
-def create_gitlab_project(gl, project_name: str, description: str = "") -> object:
-    """Create a new project in the configured GitLab group."""
-    if not GITLAB_GROUP_ID:
-        raise ValueError("GITLAB_GROUP_ID not configured")
-    
-    try:
-        group_id = int(GITLAB_GROUP_ID)
-    except ValueError:
-        raise ValueError(f"GITLAB_GROUP_ID must be a valid integer, got: {GITLAB_GROUP_ID}")
-    
+def create_gitlab_project(gl, project_name: str, group_id: int, description: str = "") -> object:
+    """Create a new project in the specific GitLab group."""
     project_data = {
         "name": project_name,
         "namespace_id": group_id,
@@ -277,7 +278,10 @@ def setup_gitlab_project(
     gl = get_gitlab_client()
     
     # Create the project
-    project = create_gitlab_project(gl, project_name, description)
+    if not GITLAB_GROUP_ID:
+        raise ValueError("GITLAB_GROUP_ID not configured for Corax")
+        
+    project = create_gitlab_project(gl, project_name, int(GITLAB_GROUP_ID), description)
     
     # Parse configurations
     subnet_config = parse_subnet(subnet)
@@ -319,6 +323,182 @@ def setup_gitlab_project(
     }
 
 
+def create_pangolin_config_file(project, config_data: dict) -> None:
+    """
+    Creates envs/pangolin_config.yml in the repository.
+    GitLab API automatically creates directories if they are in the file_path.
+    """
+    project_name = config_data.get('project_name', '')
+    cluster_number = config_data.get('cluster_number', '')
+    subnet = config_data.get('subnet', '')
+    cloud_project_id = config_data.get('cloud_project_id', '')
+    
+    # Parse flavor logic specifically for Pangolin
+    # We take CPU and RAM from flavor string (e.g. "2/4 30%")
+    # BUT we IGNORE the percentages and force 1:1 ratio
+    flavor_str = config_data.get('flavor', '')
+    parsed_flavor = parse_flavor(flavor_str)
+    
+    # Defaults if parsing fails
+    cpu = parsed_flavor.get('cpu', '2')
+    ram = parsed_flavor.get('ram', '4')
+    
+    # Data Disk from user input (or default 10)
+    data_disk_gb = config_data.get('data_disk_gb', 10)
+
+    yaml_content = f"""
+version: '0.2'
+cluster:
+  name: pangolin_etc_pgbouncer
+  deploy_node_enabled: true
+infra:
+  ssh:
+    public_key: ''
+  nodes:
+    pangolin_node1:
+      cpu_cores: {cpu}
+      ram_gb: {ram}
+      oversubscription_ratio: '1:1'
+      data_disk_gb: {data_disk_gb}
+      ip: ''
+    pangolin_node2:
+      cpu_cores: {cpu}
+      ram_gb: {ram}
+      oversubscription_ratio: '1:1'
+      data_disk_gb: {data_disk_gb}
+      ip: ''
+    arbiter:
+      cpu_cores: 2
+      ram_gb: 4
+      oversubscription_ratio: '1:1'
+      ip: ''
+    deploy:
+      cpu_cores: 4
+      ram_gb: 8
+      oversubscription_ratio: '1:1'
+      ip: ''
+  cloud:
+    project_name: {project_name}
+    cluster_number: '{cluster_number}'
+    cluster_subnet: {subnet}
+    vpc_name: Default
+    default_gateway: ''
+    vip: ''
+    users_subnet: 10.20.32.0/24
+    infra_subnet_gitlab: 172.18.0.0/24
+    infra_subnet_jumphost: 10.10.11.0/24
+    cloudru_project_id: {cloud_project_id}
+security:
+  password_mode: generate
+  reuse_single_password: false
+  etcd_password:
+    value: ''
+  pgbouncer_scram_password:
+    value: ''
+  pgbouncer_scram_password_orig:
+    value: ''
+  postgres_linux_pass:
+    value: ''
+  postgres_linux_pass_orig:
+    value: ''
+  kmadmin_pg_linux_pass:
+    value: ''
+  kmadmin_pg_linux_pass_orig:
+    value: ''
+  postgres_db_pass:
+    value: ''
+  patroni_password:
+    value: ''
+  pg_backup_user_passwd:
+    value: ''
+  patroni_yml_pass:
+    value: ''
+postgresql:
+  databases:
+  - name: db1
+    owner_group: backend_app_admins
+    encoding: UTF8
+    lc_collate: ru_RU.UTF-8
+    lc_ctype: ru_RU.UTF-8
+    template: template0
+    users_in_group:
+    - admin
+  users:
+  - name: admin
+    password:
+      value: ''
+"""
+    
+    default_branch = project.default_branch or "main"
+    
+    project.files.create({
+        "file_path": "envs/pangolin_config.yml",
+        "branch": default_branch,
+        "content": yaml_content.strip(),
+        "commit_message": "Add pangolin_config.yml",
+    })
+    logger.info(f"Created envs/pangolin_config.yml in project {project.name}")
+
+
+def setup_pangolin_project(
+    cloud_project_id: str,
+    project_name: str,
+    description: str,
+    subnet: str,
+    flavor: str,
+    data_disk_gb: int
+) -> dict:
+    """
+    Orchestrator for Pangolin deployment.
+    Uses specific Token and Group ID.
+    """
+    pangolin_token = PANGOLIN_GITLAB_TOKEN
+    
+    try:
+        pangolin_group_id = int(PANGOLIN_GITLAB_GROUP_ID)
+    except (ValueError, TypeError):
+        raise ValueError(f"Invalid PANGOLIN_GITLAB_GROUP_ID: {PANGOLIN_GITLAB_GROUP_ID}")
+
+    # Initialize client with Pangolin token
+    gl = get_gitlab_client(token=pangolin_token)
+    
+    # Create project in Pangolin group
+    project = create_gitlab_project(gl, project_name, pangolin_group_id, description)
+    
+    # Set variables (reusing logic if appropriate, otherwise customize)
+    variables = {
+        "CLOUDRU_PROJECT_ID": cloud_project_id,
+        "CLUSTER_SUBNET": subnet,
+        "GIS_PROJECT_NAME": project_name,
+        # Add other specific variables if needed
+    }
+    set_project_variables(project, variables)
+    
+    # Create .gitlab-ci.yml (assuming same CI or different?)
+    # The plan says "Create .gitlab-ci.yml (Basic deploy)" - defaulting to same logic for now
+    create_gitlab_ci_file(project)
+    
+    # Create Pangolin specific config
+    create_pangolin_config_file(project, {
+        "subnet": subnet,
+        "flavor": flavor,
+        "data_disk_gb": data_disk_gb,
+        "project_name": project_name,
+        "cloud_project_id": cloud_project_id,
+        "cluster_number": description
+    })
+    
+    # Trigger pipeline
+    pipeline = trigger_pipeline(project)
+    
+    return {
+        "project_url": project.web_url,
+        "project_id": project.id,
+        "pipeline_id": pipeline.id,
+        "pipeline_url": f"{project.web_url}/-/pipelines/{pipeline.id}",
+    }
+
+
 def get_pipeline_status(project_id: int, pipeline_id: int) -> dict:
     """
     Get the status of a GitLab pipeline.
@@ -330,8 +510,16 @@ def get_pipeline_status(project_id: int, pipeline_id: int) -> dict:
     Returns:
         Dictionary with pipeline status information
     """
-    gl = get_gitlab_client()
-    project = gl.projects.get(project_id)
+    try:
+        # Try default (Corax) token first
+        gl = get_gitlab_client()
+        project = gl.projects.get(project_id)
+    except gitlab.exceptions.GitlabGetError:
+        # If not found, try Pangolin token
+        logger.info(f"Project {project_id} not found with default token, trying Pangolin token")
+        gl = get_gitlab_client(token=PANGOLIN_GITLAB_TOKEN)
+        project = gl.projects.get(project_id)
+        
     pipeline = project.pipelines.get(pipeline_id)
     jobs = pipeline.jobs.list(per_page=100)
     

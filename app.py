@@ -26,7 +26,7 @@ from flask import (
 from dotenv import load_dotenv
 
 # Import GitLab utility functions for cluster creation
-from utils import setup_gitlab_project, get_pipeline_status
+from utils import setup_gitlab_project, setup_pangolin_project, get_pipeline_status
 
 load_dotenv()
 
@@ -455,16 +455,29 @@ def create_cluster_api():
             return jsonify({"success": False, "error": f"Missing required field: {field}"}), 400
     
     try:
-        # Execute GitLab project setup (previously in bot.py)
-        result = setup_gitlab_project(
-            cloud_project_id=data.get('cloud_project_id', ''),
-            project_name=data['title'],
-            description=data.get('desc', ''),
-            subnet=data['subnet'],
-            flavor=data['flavor']
-        )
+        service_choice = data.get('choice') # "Pangolin" or "Corax" (default)
         
-        logger.info(f"Created cluster project: {result['project_url']}")
+        if service_choice == "Pangolin":
+            # Execute Pangolin setup flow
+            result = setup_pangolin_project(
+                cloud_project_id=data.get('cloud_project_id', ''),
+                project_name=data['title'],
+                description=data.get('desc', ''),
+                subnet=data['subnet'],
+                flavor=data['flavor'],
+                data_disk_gb=data.get('data_disk_gb')
+            )
+        else:
+            # Execute Corax setup flow (default)
+            result = setup_gitlab_project(
+                cloud_project_id=data.get('cloud_project_id', ''),
+                project_name=data['title'],
+                description=data.get('desc', ''),
+                subnet=data['subnet'],
+                flavor=data['flavor']
+            )
+        
+        logger.info(f"Created {service_choice or 'Corax'} cluster project: {result['project_url']}")
         
         # Return JSON with URLs, keeping the window open
         return jsonify({

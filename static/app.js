@@ -367,6 +367,21 @@ class CloudManagerApp {
                     hiddenInput.value = choice;
                 }
 
+                // Show/Hide Data Disk field based on choice
+                const dataDiskGroup = document.getElementById('dataDiskGroup');
+                const dataDiskInput = document.getElementById('data_disk_gb');
+
+                if (choice === 'Pangolin') {
+                    if (dataDiskGroup) dataDiskGroup.classList.remove('hidden');
+                    if (dataDiskInput) dataDiskInput.required = true;
+                } else {
+                    if (dataDiskGroup) dataDiskGroup.classList.add('hidden');
+                    if (dataDiskInput) {
+                        dataDiskInput.required = false;
+                        dataDiskInput.value = ''; // Clean up
+                    }
+                }
+
                 this.switchPage(this.formSection);
                 this.stopVmCountPolling();
             });
@@ -469,17 +484,40 @@ class CloudManagerApp {
         const flavor = flavorSelect.value;
         const choice = choiceInput ? (choiceInput.value || "Не выбрано") : "Не выбрано";
         const cloudProjectId = cloudProjectIdInput ? cloudProjectIdInput.value : '';
+        const dataDiskInput = document.getElementById('data_disk_gb');
+        const dataDiskGb = dataDiskInput ? dataDiskInput.value : null;
 
         if (!subnet || !flavor) {
             this.showAlert("Пожалуйста, выберите подсеть и конфигурацию");
             return;
         }
+
+        // Validate Data Disk for Pangolin
+        if (choice === 'Pangolin') {
+            if (!dataDiskGb) {
+                this.showAlert("Пожалуйста, укажите размер Data Disk");
+                return;
+            }
+            if (parseInt(dataDiskGb) < 10) {
+                this.showAlert("Минимальный размер Data Disk — 10 GB");
+                return;
+            }
+        }
+
         if (!title) {
             this.showAlert("Введите название виртуальной машины");
             return;
         }
 
-        const data = { choice, title, desc: description, subnet, flavor, cloud_project_id: cloudProjectId };
+        const data = {
+            choice,
+            title,
+            desc: description,
+            subnet,
+            flavor,
+            cloud_project_id: cloudProjectId,
+            data_disk_gb: dataDiskGb ? parseInt(dataDiskGb) : 0
+        };
 
         if (submitBtn) this.setButtonLoading(submitBtn, true);
 
