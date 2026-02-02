@@ -340,8 +340,8 @@ def create_pangolin_config_file(project, config_data: dict) -> None:
     parsed_flavor = parse_flavor(flavor_str)
     
     # Defaults if parsing fails
-    cpu = parsed_flavor.get('cpu', '2')
-    ram = parsed_flavor.get('ram', '4')
+    cpu = parsed_flavor.get('cpu', '4')
+    ram = parsed_flavor.get('ram', '8')
     
     # Data Disk from user input (or default 10)
     data_disk_gb = config_data.get('data_disk_gb', 10)
@@ -440,6 +440,101 @@ postgresql:
     logger.info(f"Created envs/pangolin_config.yml in project {project.name}")
 
 
+def create_pangolin_gitlab_ci_file(project) -> None:
+    """Create .gitlab-ci.yml for Pangolin project."""
+    gitlab_ci_content = """workflow: 
+  rules:
+  - if: $CI_PIPELINE_SOURCE == "trigger"
+    when: always
+  - if: $CI_PIPELINE_SOURCE == "web"
+    when: always
+  - if: $CI_PIPELINE_SOURCE == "api"
+    when: always
+  - when: never
+include:
+- project: paas-platform/ci-templates/pangolin
+  ref: main
+  file: stages/stages.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: v0.1
+  file: templates/templates.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: v0.1
+  file: validate/validate.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: v0.1
+  file: generate/generate.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: v0.1
+  file: api/api.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: v0.1
+  file: connectivity/connectivity.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: v0.1
+  file: terraform-sg/terraform-sg.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: v0.1
+  file: terraform/terraform.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: v0.1
+  file: repo/repo.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: v0.1
+  file: cloud-api/cloud-api.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: v0.1
+  file: lvm/lvm.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: v0.1
+  file: packages/packages.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: v0.1
+  file: deploynode/deploynode.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: v0.1
+  file: fix/fix.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: v0.1
+  file: install/install.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: v0.1
+  file: usersdb/usersdb.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: v0.1
+  file: lb/lb.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: main
+  file: jam/jam.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: main
+  file: restart/restart.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: main
+  file: db-conn-test/db-conn-test.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: main
+  file: cleanup/cleanup.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: v0.1
+  file: finalize/finalize.yml
+- project: paas-platform/ci-templates/pangolin
+  ref: main
+  file: audit/audit.yml  
+"""
+    
+    # Get the project's default branch
+    default_branch = project.default_branch or "main"
+    
+    project.files.create({
+        "file_path": ".gitlab-ci.yml",
+        "branch": default_branch,
+        "content": gitlab_ci_content,
+        "commit_message": "Add .gitlab-ci.yml for Pangolin",
+    })
+    logger.info(f"Created .gitlab-ci.yml in project {project.name}")
+
+
 def setup_pangolin_project(
     cloud_project_id: str,
     project_name: str,
@@ -466,17 +561,16 @@ def setup_pangolin_project(
     project = create_gitlab_project(gl, project_name, pangolin_group_id, description)
     
     # Set variables (reusing logic if appropriate, otherwise customize)
-    variables = {
-        "CLOUDRU_PROJECT_ID": cloud_project_id,
-        "CLUSTER_SUBNET": subnet,
-        "GIS_PROJECT_NAME": project_name,
-        # Add other specific variables if needed
-    }
-    set_project_variables(project, variables)
+    # variables = {
+    #     "CLOUDRU_PROJECT_ID": cloud_project_id,
+    #     "CLUSTER_SUBNET": subnet,
+    #     "GIS_PROJECT_NAME": project_name,
+    #     # Add other specific variables if needed
+    # }
+    # set_project_variables(project, variables)
     
-    # Create .gitlab-ci.yml (assuming same CI or different?)
-    # The plan says "Create .gitlab-ci.yml (Basic deploy)" - defaulting to same logic for now
-    create_gitlab_ci_file(project)
+    # Create .gitlab-ci.yml
+    create_pangolin_gitlab_ci_file(project)
     
     # Create Pangolin specific config
     create_pangolin_config_file(project, {
